@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPS Rate Calculator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <header style="position: relative; text-align: center;">
+            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 15px;">
+                <img src="ups_logo.png" alt="UPS Logo" style="height: 60px; width: auto;">
+                <h1 style="margin: 0;">UPS Rate Calculator</h1>
+            </div>
+            <div
+                style="position: absolute; top: 5px; right: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;">
+                <a href="https://lynk.id/exportimport" target="_blank"
+                    style="text-decoration: none; color: #333; font-weight: bold; font-size: 0.75em;">
+                    lynk.id/exportimport
+                </a>
+                <a href="https://wa.me/6281290650963" target="_blank"
+                    style="text-decoration: none; color: #25D366; font-weight: bold; font-size: 0.7em;">
+                    WA: 081 2906 50963
+                </a>
+            </div>
+        </header>
+
+        <!-- Scripts for Duty Tax Data -->
+        <script src="hs_data.js"></script>
+        <script src="kurs_data.js"></script>
+
+        <form id="calculator-form">
+            <div class="main-grid">
+                <!-- Left Column: Shipment & Rates -->
+                <div class="left-col">
+                    <!-- Shipment Detail -->
+                    <div class="section-box">
+                        <div class="section-header">Shipment Detail</div>
+                        <div class="section-content">
+                            <div class="input-row">
+                                <label>Date</label>
+                                <input type="date" id="shipmentDate" style="width: 100%;">
+                            </div>
+                            <div class="input-row">
+                                <label>Traffic</label>
+                                <div class="toggle-container" style="display:flex; gap:5px;">
+                                    <input type="radio" id="type-export" name="shipmentType" value="export" checked>
+                                    <label for="type-export" style="font-weight:normal;">Export</label>
+                                    <input type="radio" id="type-import" name="shipmentType" value="import"> <label
+                                        for="type-import" style="font-weight:normal;">Import</label>
+                                </div>
+                            </div>
+                            <div class="input-row">
+                                <label>Service</label>
+                                <select id="serviceType">
+                                    <option value="wwef">Worldwide Express Freight (WWEF)</option>
+                                    <option value="saver" selected>Express Saver</option>
+                                    <option value="expedited">Expedited</option>
+                                </select>
+                            </div>
+                            <div class="input-row">
+                                <label>Content Type</label>
+                                <select id="contentType">
+                                    <option value="package" selected>Package (Non-Document)</option>
+                                    <option value="document">Document / Envelope (Max 5kg)</option>
+                                </select>
+                            </div>
+
+                            <!-- WWEF Minimum Weight Notification -->
+                            <div id="wwef-notification" class="wwef-notif"
+                                style="display:none; margin-top: 10px; padding: 10px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; color: #856404;">
+                                <strong>⚠️ WWEF Service:</strong> Minimum 71 kg / collie
+                            </div>
+
+                            <div class="input-row">
+                                <label>Origin</label>
+                                <input type="hidden" id="origin" value="other">
+                                <input type="text" id="originCountry" placeholder="Country Name" list="country-list"
+                                    style="margin-top:5px; width:100%;">
+                                <input type="text" id="originPostCode" placeholder="Postal Code"
+                                    style="margin-top:5px; width:100%;">
+                                <input type="text" id="originCity" placeholder="City" list="originCities"
+                                    style="margin-top:5px; width:100%;">
+
+                            </div>
+                            <div class="input-row">
+                                <label>Destination</label>
+                                <input type="hidden" id="destination" value="other">
+                                <input type="text" id="destinationCountry" placeholder="Country Name"
+                                    list="country-list" style="margin-top:5px; width:100%;">
+                                <input type="text" id="destinationPostCode" placeholder="Postal Code"
+                                    style="margin-top:5px; width:100%;">
+                                <input type="text" id="destinationCity" placeholder="City" list="destCities"
+                                    style="margin-top:5px; width:100%;">
+
+                            </div>
+                            <div class="input-row">
+                                <label>Zone</label>
+                                <input type="text" id="zoneDisplay" readonly placeholder="-"
+                                    style="background:#f0f0f0; width:100%; text-align:center; font-weight:bold;">
+                            </div>
+
+                            <!-- No Service Available Warning -->
+                            <div id="no-service-warning"
+                                style="display:none; margin-top: 10px; padding: 10px; background-color: #ffebee; border: 1px solid #ef5350; border-radius: 4px; color: #c62828;">
+                                <strong>⚠️ Warning:</strong> No service available for this country
+                            </div>
+
+                            <!-- Individual Service Unavailability Notifications -->
+                            <div id="saver-unavailable"
+                                style="display:none; margin-top: 10px; padding: 8px; background-color: #fff3e0; border: 1px solid #ff9800; border-radius: 4px; color: #e65100; font-size: 0.9em;">
+                                <strong>ℹ️</strong> Service Express Saver tidak tersedia untuk negara ini
+                            </div>
+                            <div id="expedited-unavailable"
+                                style="display:none; margin-top: 10px; padding: 8px; background-color: #fff3e0; border: 1px solid #ff9800; border-radius: 4px; color: #e65100; font-size: 0.9em;">
+                                <strong>ℹ️</strong> Service Expedited tidak tersedia untuk negara ini
+                            </div>
+                            <div id="wwef-unavailable"
+                                style="display:none; margin-top: 10px; padding: 8px; background-color: #fff3e0; border: 1px solid #ff9800; border-radius: 4px; color: #e65100; font-size: 0.9em;">
+                                <strong>ℹ️</strong> Service WWEF tidak tersedia untuk negara ini
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rates Component -->
+                    <div class="section-box">
+                        <div class="section-header">Rates Component
+                        </div>
+                        <div class="section-content">
+                            <!-- Service Recommendation -->
+                            <div id="service-recommendation"
+                                style="margin-bottom: 10px; padding: 10px; border: 1px solid #ccc; background-color: #f9f9f9; display: none;">
+                                <strong style="display: block; margin-bottom: 5px;">Recommended Service:</strong>
+                                <span id="recommendation-text" style="font-weight: bold;">-</span>
+                            </div>
+
+                            <div class="input-row">
+                                <label id="basicRateLabel">Basic Rate (/kg)</label>
+                                <input type="number" id="basicRate" min="0" placeholder="IDR/kg" required>
+                            </div>
+                            <div class="input-row">
+                                <label></label>
+                                <label style="font-weight:normal; font-size:0.9em;">
+                                    <input type="checkbox" id="toggle-discount"> Add Discount?
+                                </label>
+                            </div>
+                            <div class="input-row hidden" id="discount-row">
+                                <label>Discount</label>
+                                <select id="discount">
+                                    <option value="0">0% (No Discount)</option>
+                                    <option value="3">3%</option>
+                                    <option value="5">5%</option>
+                                    <option value="10">10%</option>
+                                    <option value="15">15%</option>
+                                    <option value="20">20%</option>
+                                    <option value="25">25%</option>
+                                    <option value="30">30%</option>
+                                    <option value="35">35%</option>
+                                    <option value="40">40%</option>
+                                    <option value="45">45%</option>
+                                    <option value="50">50%</option>
+                                    <option value="55">55%</option>
+                                    <option value="60">60%</option>
+                                    <option value="65">65%</option>
+                                    <option value="70">70%</option>
+                                    <option value="75">75%</option>
+                                    <option value="80">80%</option>
+                                    <option value="85">85%</option>
+                                    <option value="90">90%</option>
+                                </select>
+                            </div>
+                            <div class="input-row">
+                                <label>FSI (%)
+                                    <a href="https://www.ups.com/id/en/support/shipping-support/shipping-costs-rates/fuel-surcharges"
+                                        target="_blank" style="font-size:0.8em; margin-left:5px;">(Check)</a>
+                                </label>
+                                <div style="display:flex; gap:5px; align-items:center;">
+                                    <input type="number" id="fsi" step="0.01" min="0" placeholder="%" required>
+                                    <small id="fsi-source-label" style="font-size:0.7em; color:gray;">(Default)</small>
+                                </div>
+                            </div>
+
+                            <div class="input-row">
+                                <label>VAT</label>
+                                <input type="text" value="1.1%" disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OPTIONAL: DUTY & TAX SECTION -->
+                    <div class="section-box">
+                        <div class="section-header"
+                            style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Est. Import Duty & Tax</span>
+                            <label
+                                style="font-size:0.8em; display:flex; align-items:center; color:white; cursor:pointer;">
+                                <input type="checkbox" id="enable-duty-tax" style="margin-right:5px; cursor:pointer;">
+                                Enable
+                            </label>
+                        </div>
+                        <div class="section-content" id="duty-tax-inputs"
+                            style="display:none; transition: all 0.3s ease;">
+
+                            <!-- Importer Type -->
+                            <div class="input-row"
+                                style="margin-bottom:10px; border-bottom:1pxdashed #eee; padding-bottom:10px;">
+                                <label>Tipe Importir</label>
+                                <select id="importer-type" style="width:100%; margin-top:5px;">
+                                    <option value="company" selected>Company (Perusahaan)</option>
+                                    <option value="personal">Personal (Pribadi)</option>
+                                </select>
+                            </div>
+
+                            <!-- Multi-row HS Code & Value Section -->
+                            <div class="input-row" style="margin-bottom:10px;">
+                                <label style="width:100%;">Items (HS Code & Value)
+                                    <a href="https://insw.go.id/intr" target="_blank"
+                                        style="float:right; font-size:0.85em; color:#0645ad; text-decoration:underline;">
+                                        🔍 Cek INSW
+                                    </a>
+                                </label>
+                                <div class="table-responsive" style="margin-top:5px;">
+                                    <table class="duty-table"
+                                        style="width:100%; border-collapse: collapse; font-size: 0.9em;">
+                                        <thead>
+                                            <tr style="background:#f0f0f0; border-bottom:1px solid #ccc;">
+                                                <th style="padding:5px; text-align:left; width: 45%;">HS Code /
+                                                    Description</th>
+                                                <th style="padding:5px; text-align:center; width: 15%;">BM %</th>
+                                                <th style="padding:5px; text-align:left; width: 40%;">Value (FOB)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="duty-rows">
+                                            <!-- Row 1 -->
+                                            <tr>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <input type="text" class="hs-code-input"
+                                                        placeholder="Search HS Code..." style="width:100%;">
+                                                    <div class="hs-results-container"
+                                                        style="display:none; position:absolute; z-index:100; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; width:200px;">
+                                                    </div>
+                                                    <div class="selected-hs-display"
+                                                        style="font-size:0.8em; color:#0645ad; display:none;"></div>
+                                                    <div style="margin-top:2px;"><a href="#"
+                                                            onclick="checkINSW(this); return false;"
+                                                            style="font-size:0.75em; text-decoration:none;">📋 Copy HS &
+                                                            Cek INSW</a></div>
+                                                </td>
+                                                <td style="padding:5px; text-align:center; vertical-align:top;">
+                                                    <input type="number" class="hs-rate-input" value="0" min="0"
+                                                        step="0.1" style="width:50px; text-align:center;">
+                                                </td>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <div style="display:flex; gap:2px;">
+                                                        <select class="row-currency"
+                                                            style="width:50px; font-size:0.8em;">
+                                                            <option value="USD">$</option>
+                                                            <option value="IDR">Rp</option>
+                                                        </select>
+                                                        <input type="text" class="row-value-input" placeholder="0"
+                                                            style="width:100%;">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <!-- Row 2 -->
+                                            <tr>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <input type="text" class="hs-code-input"
+                                                        placeholder="Search HS Code..." style="width:100%;">
+                                                    <div class="hs-results-container"
+                                                        style="display:none; position:absolute; z-index:100; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; width:200px;">
+                                                    </div>
+                                                    <div class="selected-hs-display"
+                                                        style="font-size:0.8em; color:#0645ad; display:none;"></div>
+                                                </td>
+                                                <td style="padding:5px; text-align:center; vertical-align:top;">
+                                                    <input type="number" class="hs-rate-input" value="0" min="0"
+                                                        step="0.1" style="width:50px; text-align:center;">
+                                                </td>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <div style="display:flex; gap:2px;">
+                                                        <select class="row-currency"
+                                                            style="width:50px; font-size:0.8em;">
+                                                            <option value="USD">$</option>
+                                                            <option value="IDR">Rp</option>
+                                                        </select>
+                                                        <input type="text" class="row-value-input" placeholder="0"
+                                                            style="width:100%;">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <!-- Row 3 -->
+                                            <tr>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <input type="text" class="hs-code-input"
+                                                        placeholder="Search HS Code..." style="width:100%;">
+                                                    <div class="hs-results-container"
+                                                        style="display:none; position:absolute; z-index:100; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; width:200px;">
+                                                    </div>
+                                                    <div class="selected-hs-display"
+                                                        style="font-size:0.8em; color:#0645ad; display:none;"></div>
+                                                </td>
+                                                <td style="padding:5px; text-align:center; vertical-align:top;">
+                                                    <input type="number" class="hs-rate-input" value="0" min="0"
+                                                        step="0.1" style="width:50px; text-align:center;">
+                                                </td>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <div style="display:flex; gap:2px;">
+                                                        <select class="row-currency"
+                                                            style="width:50px; font-size:0.8em;">
+                                                            <option value="USD">$</option>
+                                                            <option value="IDR">Rp</option>
+                                                        </select>
+                                                        <input type="text" class="row-value-input" placeholder="0"
+                                                            style="width:100%;">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <!-- Row 4 -->
+                                            <tr>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <input type="text" class="hs-code-input"
+                                                        placeholder="Search HS Code..." style="width:100%;">
+                                                    <div class="hs-results-container"
+                                                        style="display:none; position:absolute; z-index:100; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; width:200px;">
+                                                    </div>
+                                                    <div class="selected-hs-display"
+                                                        style="font-size:0.8em; color:#0645ad; display:none;"></div>
+                                                </td>
+                                                <td style="padding:5px; text-align:center; vertical-align:top;">
+                                                    <input type="number" class="hs-rate-input" value="0" min="0"
+                                                        step="0.1" style="width:50px; text-align:center;">
+                                                </td>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <div style="display:flex; gap:2px;">
+                                                        <select class="row-currency"
+                                                            style="width:50px; font-size:0.8em;">
+                                                            <option value="USD">$</option>
+                                                            <option value="IDR">Rp</option>
+                                                        </select>
+                                                        <input type="text" class="row-value-input" placeholder="0"
+                                                            style="width:100%;">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <!-- Row 5 -->
+                                            <tr>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <input type="text" class="hs-code-input"
+                                                        placeholder="Search HS Code..." style="width:100%;">
+                                                    <div class="hs-results-container"
+                                                        style="display:none; position:absolute; z-index:100; background:white; border:1px solid #ccc; max-height:150px; overflow-y:auto; width:200px;">
+                                                    </div>
+                                                    <div class="selected-hs-display"
+                                                        style="font-size:0.8em; color:#0645ad; display:none;"></div>
+                                                </td>
+                                                <td style="padding:5px; text-align:center; vertical-align:top;">
+                                                    <input type="number" class="hs-rate-input" value="0" min="0"
+                                                        step="0.1" style="width:50px; text-align:center;">
+                                                </td>
+                                                <td style="padding:5px; vertical-align:top;">
+                                                    <div style="display:flex; gap:2px;">
+                                                        <select class="row-currency"
+                                                            style="width:50px; font-size:0.8em;">
+                                                            <option value="USD">$</option>
+                                                            <option value="IDR">Rp</option>
+                                                        </select>
+                                                        <input type="text" class="row-value-input" placeholder="0"
+                                                            style="width:100%;">
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="input-row">
+                                <label>Insurance</label>
+                                <div style="display:flex; gap:5px;">
+                                    <span style="padding:5px; background:#eee;">$</span>
+                                    <input type="text" id="val-insurance" placeholder="0" style="flex:1;">
+                                </div>
+                            </div>
+
+                            <div class="input-row">
+                                <label style="width:100%;">Kurs (IDR)
+                                    <a href="https://fiskal.kemenkeu.go.id/informasi-publik/kurs-pajak" target="_blank"
+                                        style="float:right; font-size:0.85em; color:#0645ad; text-decoration:underline;">
+                                        🔍 Cek Kurs Pajak (Kemenkeu)
+                                    </a>
+                                </label>
+                                <div style="display:flex; gap:5px;">
+                                    <input type="text" id="val-kurs" value="16.500" style="flex:1;">
+                                </div>
+                            </div>
+
+                            <div class="input-row">
+                                <label>NPWP / API?</label>
+                                <select id="has-npwp">
+                                    <option value="api">Punya API (PPh 2.5%)</option>
+                                    <option value="yes" selected>Punya NPWP (PPh 7.5% - 10%)</option>
+                                    <option value="no">Non-NPWP (PPh 15% - 20%)</option>
+                                </select>
+                            </div>
+
+                            <!-- Import Handling Section -->
+                            <div style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;">
+                                <label
+                                    style="display:flex; align-items:center; cursor:pointer; font-weight:bold; font-size:0.9em; margin-bottom:5px;">
+                                    <input type="checkbox" id="enable-handling" style="margin-right:5px;"> Hitung Import
+                                    Handling?
+                                </label>
+                                <div id="handling-inputs" style="display:none; padding-left:5px;">
+                                    <div class="input-row">
+                                        <label style="font-size:0.85em;">Handling Fee (Min 200k/2.5%)</label>
+                                        <div style="display:flex; gap:5px;">
+                                            <span style="padding:2px 5px; background:#eee; font-size:0.8em;">Rp</span>
+                                            <input type="text" id="val-handling-fee" value="0"
+                                                style="flex:1; background:#f9f9f9; color:#666;" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="input-row">
+                                        <label style="font-size:0.85em;">Disbursement (Min 94k/5.9%)</label>
+                                        <div style="display:flex; gap:5px;">
+                                            <span style="padding:2px 5px; background:#eee; font-size:0.8em;">Rp</span>
+                                            <input type="text" id="val-disbursement-fee" value="0"
+                                                style="flex:1; background:#f9f9f9; color:#666;" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="input-row">
+                                        <label style="font-size:0.85em;">Doc Fee</label>
+                                        <div style="display:flex; gap:5px;">
+                                            <span style="padding:2px 5px; background:#eee; font-size:0.8em;">Rp</span>
+                                            <input type="text" id="val-doc-fee" value="50.000" style="flex:1;">
+                                        </div>
+                                    </div>
+                                    <div class="input-row">
+                                        <label style="font-size:0.85em;">Hari di Gudang</label>
+                                        <div style="display:flex; gap:5px;">
+                                            <input type="number" id="val-warehouse-days" value="0" min="0"
+                                                style="flex:1;">
+                                            <span
+                                                style="padding:2px 5px; background:#eee; font-size:0.8em; align-self:center;">Hari</span>
+                                        </div>
+                                    </div>
+                                    <div class="input-row">
+                                        <label style="font-size:0.85em;">Sewa Gudang</label>
+                                        <div style="display:flex; gap:5px;">
+                                            <span style="padding:2px 5px; background:#eee; font-size:0.8em;">Rp</span>
+                                            <input type="text" id="val-storage-fee" value="0" style="flex:1;" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Optional Surcharges -->
+                    <div class="section-box">
+                        <div class="section-header">Optional Surcharges</div>
+                        <div class="section-content">
+                            <div class="optional-section" id="dropdown-options">
+                                <label class="checkbox-item"><input type="checkbox" value="extendedArea"> Extended
+                                    Area</label>
+                                <label class="checkbox-item"><input type="checkbox" value="remoteArea"> Remote
+                                    Area</label>
+                                <label class="checkbox-item"><input type="checkbox" value="peb"> PEB</label>
+                                <label class="checkbox-item"><input type="checkbox" value="residential">
+                                    Residential (Saver & Expedited)</label>
+                                <label class="checkbox-item"><input type="checkbox" value="residential_wwef">
+                                    Residential (WWEF)</label>
+                                <label class="checkbox-item"><input type="checkbox" value="adultSignature"> Adult
+                                    Signature</label>
+                                <label class="checkbox-item"><input type="checkbox" value="deliveryConfirmation">
+                                    Delivery Confirmation</label>
+                                <label class="checkbox-item"><input type="checkbox" value="alternateBroker">
+                                    Alternate
+                                    Broker</label>
+                                <label class="checkbox-item"><input type="checkbox" value="dutyTaxForward"> Duty Tax
+                                    Forward</label>
+                                <label class="checkbox-item"><input type="checkbox" value="ipf"> IPF</label>
+                                <label class="checkbox-item"><input type="checkbox" value="paperInvoice"> Paper
+                                    Invoice</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Dimensions & Results -->
+                <div class="right-col">
+                    <!-- Dimension Table -->
+                    <div class="section-box">
+                        <div class="section-header">Dimension (cm) & Weight (kg)</div>
+                        <div class="table-responsive">
+                            <table class="package-table">
+                                <thead>
+                                    <tr>
+                                        <th>Qty</th>
+                                        <th>L</th>
+                                        <th>W</th>
+                                        <th>H</th>
+                                        <th>Girth</th>
+                                        <th>Weight</th>
+                                        <th>C.Weight</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="package-rows">
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="wwef-unavailable-overlay"
+                            style="display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background-color: rgba(255, 235, 238, 0.98); border: 3px solid #ef5350; border-radius: 8px; padding: 30px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; min-width: 400px;">
+                            <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
+                            <div style="font-size: 1.3em; font-weight: bold; color: #c62828; margin-bottom: 10px;">
+                                Service WWEF Tidak Tersedia
+                            </div>
+                            <div style="font-size: 1em; color: #c62828;">
+                                untuk negara ini
+                            </div>
+                        </div>
+
+                        <!-- WWEF Limit Exceeded Blocking Overlay -->
+                        <div id="wwef-limit-overlay"
+                            style="display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; background-color: rgba(255, 243, 205, 0.98); border: 3px solid #ff9800; border-radius: 8px; padding: 30px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; min-width: 450px; max-width: 500px;">
+                            <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
+                            <div style="font-size: 1.3em; font-weight: bold; color: #e65100; margin-bottom: 10px;">
+                                Warning: Dimensi/Berat Melebihi Batas</div>
+                            <div id="wwef-limit-details" style="text-align: left; margin-bottom: 20px;">
+                            </div>
+                            <button onclick="document.getElementById('wwef-limit-overlay').style.display='none'"
+                                class="ups-btn">Tutup</button>
+                        </div>
+
+                        <!-- NEW: Threshold Warning Container (For LPS/AHS) -->
+
+
+
+                    </div>
+
+                    <!-- Calculation Result (Moved to Right Column) -->
+                    <div class="section-box" style="margin-top: 20px;">
+                        <div class="section-header">Calculation Result</div>
+
+                        <!-- MOVED HERE: Heavy Warning (WWEF Force / Info) -->
+                        <div id="heavy-warning" class="warning-box"
+                            style="display:none; margin: 10px 15px; padding: 12px; border: 2px solid; border-radius: 5px;">
+                            <h4 style="margin-top:0;">Info / Warning Dimensi</h4>
+                            <div id="heavy-warning-details"></div>
+
+                            <!-- Static info text for Forced WWEF cases (hidden by default unless JS populates/shows context) -->
+                            <div id="wwef-force-text" style="display:none; font-size:0.9em; margin-top:10px;">
+                                <p><strong>Jika salah satu collie terkategori Large / Heavy, disarankan split
+                                        shipment.</strong></p>
+                                <p>Jika di-combine, semua collie terkena min weight 71kg (WWEF).</p>
+                                <p><strong>Harap gunakan service WWEF.</strong> (Rate dasar WWEF berbeda).</p>
+                            </div>
+                        </div>
+
+                        <!-- MOVED HERE: LPS/AHS Warning Box (Safe from overwrite) -->
+                        <div id="lps-warning-box"
+                            style="display:none; margin: 10px 15px; padding: 12px; background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; color: #bf360c;">
+                            <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 5px;">⚠️ PERINGATAN
+                                SURCHARGE
+                            </div>
+                            <div id="lps-warning-details"></div>
+                        </div>
+
+                        <div class="section-content" id="results">
+
+                            <div class="result-row total-row">
+                                <span>Total Chargeable Weight:</span>
+                                <span id="res-total-weight">0.00 kg</span>
+                            </div>
+                            <div class="result-row total-row">
+                                <span>Base Cost:</span>
+                                <span id="res-base-cost">IDR 0</span>
+                            </div>
+                            <div id="surcharges-list"></div>
+                            <div class="result-row total-row"
+                                style="font-size: 1.2em; color: #d32f2f; margin-top: 10px; border-top: 2px solid #eee; padding-top: 10px;">
+                                <span id="res-total-cost">IDR 0</span>
+                            </div>
+
+                            <!-- Duty & Tax Result (Hidden by default) -->
+                            <div id="duty-tax-result"
+                                style="margin-top: 15px; padding-top: 10px; border-top: 2px solid #333; display: none;">
+                                <h4 style="margin:0 0 10px 0; color:#2c3e50;">Est. Import Tax (PDRI)</h4>
+
+                                <div class="result-row"><span>Nilai Pabean (CIF):</span> <span id="res-cif">Rp 0</span>
+                                </div>
+                                <div class="result-row"><span>Bea Masuk:</span> <span id="res-bm">Rp 0</span></div>
+                                <div class="result-row"><span>PPN (11%):</span> <span id="res-ppn">Rp 0</span></div>
+                                <div class="result-row"><span>PPh Impor:</span> <span id="res-pph">Rp 0</span></div>
+
+                                <div class="result-row hidden" id="res-handling-row"
+                                    style="color:#555; border-top:1px dotted #ccc; margin-top:5px; padding-top:2px;">
+                                    <span>+ Handling:</span> <span id="res-handling">Rp 0</span>
+                                </div>
+
+                                <div class="result-row total-row"
+                                    style="margin-top:5px; font-size:1.1em; color:#d35400;">
+                                    <span>Total Pajak (+Handling):</span> <span id="res-total-tax">Rp 0</span>
+                                </div>
+
+                                <div style="font-size:0.75em; color:#999; margin-top:5px; font-style:italic;">
+                                    *Freight: <span id="res-used-freight">0</span>.
+                                    Kurs: <span id="res-used-kurs">16.500</span>.
+                                </div>
+                            </div>
+
+                            <!-- Transit Prediction Model -->
+                            <div id="transit-prediction"
+                                style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ccc; display: none;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                    <span style="font-weight: bold; color: #555;">Est. Transit Time:</span>
+                                    <span id="pred-transit-time" style="font-weight: bold; color: #333;">-</span>
+                                </div>
+                                <div style="display: flex; flex-direction: column;">
+                                    <span style="font-weight: bold; color: #555; font-size: 0.9em;">Est. Routing:</span>
+                                    <span id="pred-routing"
+                                        style="font-size: 0.85em; color: #666; word-break: break-all;">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-calculate"
+                        style="width: 100%; margin-top: 20px; background: #8B0000; color: #fff; font-size: 20px; font-weight: bold; padding: 15px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); border: none; text-transform: uppercase; letter-spacing: 2px;">CALCULATE</button>
+                </div>
+            </div>
+
+        </form>
+
+        <!-- Warning Messages -->
+        <div id="omx-options" class="warning-box" style="display:none;">
+            <h4>Opsi Berat >= 70kg atau Batas Terlampaui</h4>
+            <p>Pengiriman ini memenuhi syarat untuk Worldwide Express Freight (WWEF) yang menghapus biaya tambahan
+                tertentu.</p>
+            <div class="comparison-options">
+                <div class="option-box" id="opt-a">
+                    <p id="opt-a-text"><strong>Opsi 1 (WWEF):</strong> -</p>
+                </div>
+                <div class="option-box" id="opt-b">
+                    <p id="opt-b-text"><strong>Opsi 2 (Saver):</strong> -</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="mixed-warning" class="warning-box"
+            style="display:none; background-color: #fff3cd; color: #856404; border-color: #ffeeba;">
+            <h4>Peringatan Paket Campuran</h4>
+            <p>Pengiriman Anda berisi paket Berat/Besar DAN Ringan/Kecil. Disarankan untuk memisahkannya menjadi dua
+                pengiriman berbeda (Satu WWEF, Satu Saver) untuk menghindari biaya minimum 71kg yang diterapkan pada
+                paket kecil.</p>
+        </div>
+
+
+
+        <div id="debug-output"
+            style="margin-top: 20px; padding: 10px; background: #f0f0f0; border: 1px solid #ccc; font-family: monospace; white-space: pre-wrap; display: none;">
+        </div>
+
+    </div>
+
+    <datalist id="country-list">
+        <!-- Americas -->
+        <option value="United States">
+        <option value="Canada">
+        <option value="Mexico">
+        <option value="Brazil">
+        <option value="Argentina">
+        <option value="Chile">
+        <option value="Colombia">
+        <option value="Peru">
+        <option value="Venezuela">
+        <option value="Ecuador">
+        <option value="Bolivia">
+        <option value="Paraguay">
+        <option value="Uruguay">
+        <option value="Costa Rica">
+        <option value="Panama">
+        <option value="Guatemala">
+        <option value="Honduras">
+        <option value="Nicaragua">
+        <option value="El Salvador">
+        <option value="Dominican Republic">
+        <option value="Puerto Rico">
+        <option value="Jamaica">
+        <option value="Trinidad and Tobago">
+        <option value="Bahamas">
+        <option value="Barbados">
+        <option value="Haiti">
+        <option value="Guyana">
+        <option value="Suriname">
+        <option value="Belize">
+        <option value="French Guiana">
+        <option value="Grenada">
+        <option value="St. Lucia">
+        <option value="St. Vincent">
+        <option value="Antigua and Barbuda">
+        <option value="Dominica">
+        <option value="St. Kitts">
+        <option value="Aruba">
+        <option value="Curacao">
+        <option value="Bonaire">
+        <option value="Cayman Islands">
+        <option value="Bermuda">
+        <option value="Anguilla">
+        <option value="British Virgin Islands">
+        <option value="Montserrat">
+        <option value="Turks and Caicos">
+        <option value="Guadeloupe">
+        <option value="Martinique">
+        <option value="St. Barthelemy">
+        <option value="St. Maarten">
+
+            <!-- Europe -->
+        <option value="United Kingdom">
+        <option value="France">
+        <option value="Germany">
+        <option value="Italy">
+        <option value="Spain">
+        <option value="Netherlands">
+        <option value="Belgium">
+        <option value="Switzerland">
+        <option value="Austria">
+        <option value="Poland">
+        <option value="Sweden">
+        <option value="Norway">
+        <option value="Denmark">
+        <option value="Finland">
+        <option value="Ireland">
+        <option value="Portugal">
+        <option value="Greece">
+        <option value="Czech Republic">
+        <option value="Hungary">
+        <option value="Romania">
+        <option value="Bulgaria">
+        <option value="Slovakia">
+        <option value="Croatia">
+        <option value="Slovenia">
+        <option value="Serbia">
+        <option value="Bosnia and Herzegovina">
+        <option value="Montenegro">
+        <option value="North Macedonia">
+        <option value="Albania">
+        <option value="Kosovo">
+        <option value="Lithuania">
+        <option value="Latvia">
+        <option value="Estonia">
+        <option value="Iceland">
+        <option value="Luxembourg">
+        <option value="Monaco">
+        <option value="Liechtenstein">
+        <option value="San Marino">
+        <option value="Vatican City">
+        <option value="Malta">
+        <option value="Cyprus">
+        <option value="Andorra">
+        <option value="Belarus">
+        <option value="Ukraine">
+        <option value="Moldova">
+        <option value="Russia">
+        <option value="Turkey">
+        <option value="Gibraltar">
+        <option value="Faroe Islands">
+        <option value="Greenland">
+        <option value="Canary Islands">
+        <option value="Azores">
+        <option value="Madeira">
+
+            <!-- Asia Pacific -->
+        <option value="China">
+        <option value="Southern China">
+        <option value="Japan">
+        <option value="South Korea">
+        <option value="Taiwan">
+        <option value="Hong Kong">
+        <option value="Macau">
+        <option value="Singapore">
+        <option value="Malaysia">
+        <option value="Thailand">
+        <option value="Vietnam">
+        <option value="Philippines">
+        <option value="Indonesia">
+        <option value="India">
+        <option value="Pakistan">
+        <option value="Bangladesh">
+        <option value="Sri Lanka">
+        <option value="Myanmar">
+        <option value="Cambodia">
+        <option value="Laos">
+        <option value="Brunei">
+        <option value="Australia">
+        <option value="New Zealand">
+        <option value="Papua New Guinea">
+        <option value="Fiji">
+        <option value="New Caledonia">
+        <option value="Samoa">
+        <option value="Guam">
+        <option value="Northern Mariana Islands">
+        <option value="American Samoa">
+        <option value="Nepal">
+        <option value="Bhutan">
+        <option value="Maldives">
+        <option value="Mongolia">
+        <option value="Norfolk Island">
+
+            <!-- ISMEA (Israel, South Africa, Middle East, Africa) -->
+        <option value="Israel">
+        <option value="United Arab Emirates">
+        <option value="Saudi Arabia">
+        <option value="Qatar">
+        <option value="Kuwait">
+        <option value="Bahrain">
+        <option value="Oman">
+        <option value="Jordan">
+        <option value="Lebanon">
+        <option value="Iraq">
+        <option value="Yemen">
+        <option value="South Africa">
+        <option value="Egypt">
+        <option value="Morocco">
+        <option value="Tunisia">
+        <option value="Algeria">
+        <option value="Libya">
+        <option value="Kenya">
+        <option value="Nigeria">
+        <option value="Ghana">
+        <option value="Ethiopia">
+        <option value="Tanzania">
+        <option value="Uganda">
+        <option value="Zambia">
+        <option value="Zimbabwe">
+        <option value="Botswana">
+        <option value="Namibia">
+        <option value="Mozambique">
+        <option value="Angola">
+        <option value="Cameroon">
+        <option value="Senegal">
+        <option value="Mali">
+        <option value="Niger">
+        <option value="Chad">
+        <option value="Sudan">
+        <option value="Mauritius">
+        <option value="Seychelles">
+        <option value="Madagascar">
+        <option value="Reunion">
+        <option value="Mayotte">
+        <option value="Comoros">
+        <option value="Djibouti">
+        <option value="Eritrea">
+        <option value="Somalia">
+        <option value="Rwanda">
+        <option value="Burundi">
+        <option value="Malawi">
+        <option value="Lesotho">
+        <option value="Swaziland">
+        <option value="Gabon">
+        <option value="Congo">
+        <option value="Central African Republic">
+        <option value="Equatorial Guinea">
+        <option value="Sao Tome and Principe">
+        <option value="Cape Verde">
+        <option value="Gambia">
+        <option value="Guinea">
+        <option value="Guinea-Bissau">
+        <option value="Sierra Leone">
+        <option value="Liberia">
+        <option value="Cote d'Ivoire">
+        <option value="Burkina Faso">
+        <option value="Togo">
+        <option value="Benin">
+        <option value="Mauritania">
+
+            <!-- Central Asia & Caucasus -->
+        <option value="Kazakhstan">
+        <option value="Uzbekistan">
+        <option value="Turkmenistan">
+        <option value="El Salvador">
+        <option value="Dominican Republic">
+        <option value="Puerto Rico">
+        <option value="Jamaica">
+        <option value="Trinidad and Tobago">
+        <option value="Bahamas">
+        <option value="Barbados">
+        <option value="Haiti">
+        <option value="Guyana">
+        <option value="Suriname">
+        <option value="Belize">
+        <option value="French Guiana">
+        <option value="Grenada">
+        <option value="St. Lucia">
+        <option value="St. Vincent">
+        <option value="Antigua and Barbuda">
+        <option value="Dominica">
+        <option value="St. Kitts">
+        <option value="Aruba">
+        <option value="Curacao">
+        <option value="Bonaire">
+        <option value="Cayman Islands">
+        <option value="Bermuda">
+        <option value="Anguilla">
+        <option value="British Virgin Islands">
+        <option value="Montserrat">
+        <option value="Turks and Caicos">
+        <option value="Guadeloupe">
+        <option value="Martinique">
+        <option value="St. Barthelemy">
+        <option value="St. Maarten">
+
+            <!-- Europe -->
+        <option value="United Kingdom">
+        <option value="France">
+        <option value="Germany">
+        <option value="Italy">
+        <option value="Spain">
+        <option value="Netherlands">
+        <option value="Belgium">
+        <option value="Switzerland">
+        <option value="Austria">
+        <option value="Poland">
+        <option value="Sweden">
+        <option value="Norway">
+        <option value="Denmark">
+        <option value="Finland">
+        <option value="Ireland">
+        <option value="Portugal">
+        <option value="Greece">
+        <option value="Czech Republic">
+        <option value="Hungary">
+        <option value="Romania">
+        <option value="Bulgaria">
+        <option value="Slovakia">
+        <option value="Croatia">
+        <option value="Slovenia">
+        <option value="Serbia">
+        <option value="Bosnia and Herzegovina">
+        <option value="Montenegro">
+        <option value="North Macedonia">
+        <option value="Albania">
+        <option value="Kosovo">
+        <option value="Lithuania">
+        <option value="Latvia">
+        <option value="Estonia">
+        <option value="Iceland">
+        <option value="Luxembourg">
+        <option value="Monaco">
+        <option value="Liechtenstein">
+        <option value="San Marino">
+        <option value="Vatican City">
+        <option value="Malta">
+        <option value="Cyprus">
+        <option value="Andorra">
+        <option value="Belarus">
+        <option value="Ukraine">
+        <option value="Moldova">
+        <option value="Russia">
+        <option value="Turkey">
+        <option value="Gibraltar">
+        <option value="Faroe Islands">
+        <option value="Greenland">
+        <option value="Canary Islands">
+        <option value="Azores">
+        <option value="Madeira">
+
+            <!-- Asia Pacific -->
+        <option value="China">
+        <option value="Southern China">
+        <option value="Japan">
+        <option value="South Korea">
+        <option value="Taiwan, China">
+        <option value="Hong Kong">
+        <option value="Macau">
+        <option value="Singapore">
+        <option value="Malaysia">
+        <option value="Thailand">
+        <option value="Vietnam">
+        <option value="Philippines">
+        <option value="Indonesia">
+        <option value="India">
+        <option value="Pakistan">
+        <option value="Bangladesh">
+        <option value="Sri Lanka">
+        <option value="Myanmar">
+        <option value="Cambodia">
+        <option value="Laos">
+        <option value="Brunei">
+        <option value="Australia">
+        <option value="New Zealand">
+        <option value="Papua New Guinea">
+        <option value="Fiji">
+        <option value="New Caledonia">
+        <option value="Samoa">
+        <option value="Guam">
+        <option value="Northern Mariana Islands">
+        <option value="American Samoa">
+        <option value="Nepal">
+        <option value="Bhutan">
+        <option value="Maldives">
+        <option value="Mongolia">
+        <option value="Norfolk Island">
+
+            <!-- ISMEA (Israel, South Africa, Middle East, Africa) -->
+        <option value="Israel">
+        <option value="United Arab Emirates">
+        <option value="Saudi Arabia">
+        <option value="Qatar">
+        <option value="Kuwait">
+        <option value="Bahrain">
+        <option value="Oman">
+        <option value="Jordan">
+        <option value="Lebanon">
+        <option value="Iraq">
+        <option value="Yemen">
+        <option value="South Africa">
+        <option value="Egypt">
+        <option value="Morocco">
+        <option value="Tunisia">
+        <option value="Algeria">
+        <option value="Libya">
+        <option value="Kenya">
+        <option value="Nigeria">
+        <option value="Ghana">
+        <option value="Ethiopia">
+        <option value="Tanzania">
+        <option value="Uganda">
+        <option value="Zambia">
+        <option value="Zimbabwe">
+        <option value="Botswana">
+        <option value="Namibia">
+        <option value="Mozambique">
+        <option value="Angola">
+        <option value="Cameroon">
+        <option value="Senegal">
+        <option value="Mali">
+        <option value="Niger">
+        <option value="Chad">
+        <option value="Sudan">
+        <option value="Mauritius">
+        <option value="Seychelles">
+        <option value="Madagascar">
+        <option value="Reunion">
+        <option value="Mayotte">
+        <option value="Comoros">
+        <option value="Djibouti">
+        <option value="Eritrea">
+        <option value="Somalia">
+        <option value="Rwanda">
+        <option value="Burundi">
+        <option value="Malawi">
+        <option value="Lesotho">
+        <option value="Swaziland">
+        <option value="Gabon">
+        <option value="Congo">
+        <option value="Central African Republic">
+        <option value="Equatorial Guinea">
+        <option value="Sao Tome and Principe">
+        <option value="Cape Verde">
+        <option value="Gambia">
+        <option value="Guinea">
+        <option value="Guinea-Bissau">
+        <option value="Sierra Leone">
+        <option value="Liberia">
+        <option value="Cote d'Ivoire">
+        <option value="Burkina Faso">
+        <option value="Togo">
+        <option value="Benin">
+        <option value="Mauritania">
+
+            <!-- Central Asia & Caucasus -->
+        <option value="Kazakhstan">
+        <option value="Uzbekistan">
+        <option value="Turkmenistan">
+        <option value="Kyrgyzstan">
+        <option value="Tajikistan">
+        <option value="Afghanistan">
+        <option value="Armenia">
+        <option value="Azerbaijan">
+        <option value="Georgia">
+    </datalist>
+
+    <datalist id="originCities"></datalist>
+    <datalist id="destCities"></datalist>
+
+    <script src="rates_data.js"></script>
+    <script src="city_data.js"></script>
+    <script src="fsi_data.js"></script>
+    <script src="hs_data.js"></script>
+    <script src="script.js?v=23"></script>
+</body>
+
+</html>

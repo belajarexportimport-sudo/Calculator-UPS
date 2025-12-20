@@ -1,0 +1,343 @@
+:root {
+    --bg-color: #ffffff;
+    --text-color: #000000;
+    --border-color: #000000;
+    --header-bg: #e6b800;
+    /* Gold/Yellow from screenshot */
+    --header-text: #000000;
+    --section-bg: #f0f0f0;
+    --input-bg: #ffffff;
+    --highlight-bg: #ffffcc;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    /* Standard font like Excel */
+    background-color: #f5f5f5;
+    color: var(--text-color);
+    padding: 20px;
+    font-size: 14px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+header {
+    text-align: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+header h1 {
+    font-size: 24px;
+    text-transform: uppercase;
+    color: #800000;
+    /* Dark red/brown from screenshot header */
+}
+
+/* Main Grid Layout */
+.main-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+/* Sticky Right Column for Desktop */
+.right-col {
+    position: sticky;
+    top: 20px;
+    align-self: start;
+    height: auto;
+    max-height: 95vh;
+    overflow-y: auto;
+    /* Allow scroll if sidebar is too tall */
+}
+
+/* Section Styling */
+.section-box {
+    position: relative;
+    border: 2px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.section-header {
+    background: var(--header-bg);
+    padding: 5px 10px;
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    text-transform: uppercase;
+    font-size: 13px;
+}
+
+.section-content {
+    padding: 10px;
+    background: white;
+}
+
+/* Form Elements */
+.input-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 2px;
+}
+
+.input-row:last-child {
+    border-bottom: none;
+}
+
+.input-row label {
+    font-weight: bold;
+    font-size: 12px;
+    flex: 1;
+}
+
+.input-row input,
+.input-row select {
+    flex: 1;
+    padding: 4px;
+    border: 1px solid #ccc;
+    font-size: 12px;
+    text-align: right;
+}
+
+.input-row select {
+    text-align: left;
+}
+
+/* Table Styling */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.package-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.package-table th {
+    background: var(--header-bg);
+    border: 1px solid var(--border-color);
+    padding: 5px;
+    text-align: center;
+}
+
+.package-table td {
+    border: 1px solid #ccc;
+    padding: 1px;
+}
+
+.package-table input,
+.package-table select {
+    width: 100%;
+    border: none;
+    padding: 2px;
+    text-align: center;
+    background: transparent;
+}
+
+.package-table input:focus {
+    background: #e6f7ff;
+    outline: none;
+}
+
+/* Freight Rates (Results) */
+.freight-rates-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.freight-rates-table th,
+.freight-rates-table td {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+}
+
+.freight-rates-table th {
+    text-align: left;
+    background: #f0f0f0;
+}
+
+.freight-rates-table td.amount {
+    text-align: right;
+    font-weight: bold;
+}
+
+.freight-rates-table tr.total-row {
+    background: var(--header-bg);
+    font-weight: bold;
+}
+
+.calculate-btn {
+    width: 100%;
+    padding: 10px;
+    background: #800000;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    text-transform: uppercase;
+}
+
+.calculate-btn:hover {
+    background: #a00000;
+}
+
+/* Optional Surcharges */
+.optional-section {
+    margin-top: 10px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.checkbox-item {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Utility */
+.text-right {
+    text-align: right;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+        width: 100%;
+        border: none;
+        box-shadow: none;
+    }
+
+    /* Stack the main grid */
+    .main-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    /* Adjust header for mobile */
+    header div {
+        flex-direction: column;
+        gap: 5px !important;
+    }
+
+    header h1 {
+        font-size: 20px;
+    }
+
+    header img {
+        height: 50px !important;
+    }
+
+    /* Reposition the contact links at top right */
+    header>div:nth-child(2) {
+        position: static !important;
+        margin-top: 10px;
+        align-items: center !important;
+        width: 100%;
+    }
+
+    /* Make inputs larger for touch targets */
+    .input-row {
+        flex-direction: column;
+        align-items: flex-start;
+        padding-bottom: 8px;
+    }
+
+    .input-row label {
+        margin-bottom: 4px;
+        font-size: 14px;
+    }
+
+    .input-row input,
+    .input-row select {
+        width: 100%;
+        font-size: 16px;
+        /* Prevents iOS zoom */
+        padding: 8px;
+    }
+
+    /* Table adjustments */
+    .section-header {
+        font-size: 14px;
+        padding: 8px;
+    }
+
+    .package-table th,
+    .package-table td {
+        padding: 4px;
+        font-size: 11px;
+    }
+
+    .package-table input,
+    .package-table select {
+        font-size: 13px;
+    }
+
+    /* Button sizing */
+    .btn-calculate {
+        padding: 20px;
+        font-size: 18px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+        border-radius: 0;
+        background: #990000;
+        /* Slightly lighter for visibility */
+    }
+
+    /* Add padding to bottom of body to account for fixed button */
+    body {
+        padding-bottom: 80px;
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    /* Adjust warning boxes */
+    .warning-box,
+    #wwef-notification,
+    #no-service-warning {
+        font-size: 0.9em;
+    }
+
+    /* Modal/Overlays */
+    #wwef-limit-overlay,
+    #wwef-unavailable-overlay {
+        min-width: 90% !important;
+        width: 90% !important;
+        padding: 20px !important;
+    }
+}
