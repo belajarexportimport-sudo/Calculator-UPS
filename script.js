@@ -2806,70 +2806,142 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const COUNTRY_NAME_TO_CODE = {
             "united states": "US", "usa": "US", "us": "US",
-            "australia": "AU",
+            "australia": "AU", "austria": "AT",
             "china": "CN", "cn": "CN",
-            "singapore": "SG",
-            "malaysia": "MY",
-            "hong kong": "HK",
-            "japan": "JP",
-            "taiwan": "TW",
-            "thailand": "TH",
-            "vietnam": "VN",
-            "korea": "KR", "south korea": "KR",
-            "germany": "DE",
-            "france": "FR",
-            "united kingdom": "GB", "uk": "GB",
-            "netherlands": "NL",
-            "italy": "IT",
-            "spain": "ES",
-            "canada": "CA",
-            "india": "IN",
-            "indonesia": "ID" // mainly for origin
+            "singapore": "SG", "malaysia": "MY", "hong kong": "HK",
+            "japan": "JP", "taiwan": "TW", "thailand": "TH", "vietnam": "VN",
+            "korea": "KR", "south korea": "KR", "philippines": "PH",
+            "indonesia": "ID", "india": "IN",
+            "germany": "DE", "france": "FR", "united kingdom": "GB", "uk": "GB",
+            "netherlands": "NL", "belgium": "BE", "italy": "IT", "spain": "ES",
+            "switzerland": "CH", "sweden": "SE", "norway": "NO", "denmark": "DK",
+            "finland": "FI", "ireland": "IE", "portugal": "PT", "poland": "PL",
+            "czech republic": "CZ", "hungary": "HU", "romania": "RO", "greece": "GR",
+            "russia": "RU", "turkey": "TR", "uae": "AE", "united arab emirates": "AE",
+            "audi arabia": "SA", "saudi arabia": "SA",
+            "canada": "CA", "mexico": "MX", "brazil": "BR", "argentina": "AR",
+            "chile": "CL", "colombia": "CO", "peru": "PE",
+            "new zealand": "NZ"
         };
 
         const code = COUNTRY_NAME_TO_CODE[countryName.toLowerCase()];
         if (!code) return; // No mapping found
 
         // Look up in Model
-        // Structure: model[traffic][COUNTRY][service][day]
-        // Traffic key is 'export' / 'import'
-        // Service key might be mixed case in model? Python script: 'UPS saver' -> 'UPS saver' (FullService).
-        // Wait, the python script combined 'Service' + 'service2'. 
-        // Example: 'UPS' + 'saver' = 'UPS saver'.
-        // In JS we only have 'saver'. We assume Carrier is UPS.
-        // So we need to construct the key e.g. "UPS saver".
+        let foundData = null;
 
-        // Let's assume Carrier is UPS for this calculator.
         let serviceKey = "";
         if (serviceVal === 'saver') serviceKey = "UPS saver";
         else if (serviceVal === 'expedited') serviceKey = "UPS expedited";
-        else if (serviceVal === 'wwef') serviceKey = "UPS wwef"; // Check actual data keys!
+        else if (serviceVal === 'wwef') serviceKey = "UPS wwef";
 
-        // Fallback: try just 'saver' if the user data didn't have carrier name?
-        // The python script output: "UPS saver".
-
-        if (TRANSIT_MODEL[trafficType] &&
-            TRANSIT_MODEL[trafficType][code]) {
-
+        if (TRANSIT_MODEL[trafficType] && TRANSIT_MODEL[trafficType][code]) {
             let countryData = TRANSIT_MODEL[trafficType][code];
-
-            // Try to find matching service key
-            // We can iterate keys to find one containing our serviceVal
-            let foundServiceData = null;
             Object.keys(countryData).forEach(k => {
                 if (k.toLowerCase().includes(serviceVal)) {
-                    foundServiceData = countryData[k];
+                    foundData = countryData[k][dayName];
                 }
             });
+        }
 
-            if (foundServiceData && foundServiceData[dayName]) {
-                const data = foundServiceData[dayName];
-                // Show result
-                predTimeSpan.textContent = `${data.transit} Days`;
-                predRoutingSpan.textContent = data.route;
-                transitDiv.style.display = 'block';
+        // --- FALLBACK LOGIC (Extrapolation) ---
+        if (!foundData) {
+            foundData = getExtrapolatedTransit(trafficType, code, serviceVal);
+        }
+
+        if (foundData) {
+            // User Request: Round up transit time (e.g. 2.2 -> 3)
+            const rawTransit = String(foundData.transit).replace(',', '.');
+            const transitDays = Math.ceil(parseFloat(rawTransit) || 0);
+            predTimeSpan.textContent = `${transitDays} Days`;
+            predRoutingSpan.textContent = foundData.route || '-';
+            transitDiv.style.display = 'block';
+        }
+    }
+
+    // Helper: Generate Routing based on Region logic
+    function getExtrapolatedTransit(trafficType, code, serviceType) {
+        // Define Regional Hubs
+        const REGIONS = {
+            'EU': ['DE', 'FR', 'GB', 'IT', 'ES', 'NL', 'BE', 'AT', 'SE', 'NO', 'FI', 'DK', 'IE', 'PT', 'PL', 'CZ', 'HU', 'RO', 'CH', 'GR', 'TR', 'RU'],
+            'AM': ['US', 'CA', 'MX', 'BR', 'AR', 'CL', 'CO', 'PE'],
+            'EA': ['JP', 'KR', 'TW', 'CN', 'HK'],
+            'SEA': ['SG', 'MY', 'TH', 'VN', 'PH', 'ID'],
+            'ME': ['AE', 'SA', 'QA', 'KW', 'OM', 'LB', 'JO'],
+            'OC': ['AU', 'NZ']
+        };
+
+        let region = null;
+        for (const [rKey, countries] of Object.entries(REGIONS)) {
+            if (countries.includes(code)) {
+                region = rKey;
+                break;
             }
         }
+
+        if (!region) return null; // Unknown region
+
+        // Logic Patterns
+        let route = '';
+        let transit = 0;
+
+        if (trafficType === 'export') {
+            // ID -> World (Routing via Major Hubs)
+            if (region === 'EU') {
+                // Main Hub: Cologne (CGN), Germany
+                route = `ID - SG - CN - IN - DE (Cologne) - ${code}`;
+                transit = 5;
+            } else if (region === 'AM') {
+                // Main Hub: Louisville (SDF), USA
+                if (code === 'US') {
+                    route = `ID - SG - HK - US (Louisville) - ${code}`;
+                    transit = 5;
+                } else {
+                    route = `ID - SG - HK - US (Louisville) - ${code}`;
+                    transit = 6;
+                }
+            } else if (region === 'EA') {
+                // Intra-Asia Hubs: Shenzhen (SZX) / Hong Kong (HKG)
+                route = `ID - SG - CN (Shenzhen) - ${code}`;
+                transit = 3;
+            } else if (region === 'SEA') {
+                route = `ID - SG - ${code}`;
+                transit = 2;
+            } else if (region === 'ME') {
+                // Dubai (DXB) is often a gateway
+                route = `ID - SG - CN - AE (Dubai) - ${code}`;
+                transit = 4;
+            } else if (region === 'OC') {
+                route = `ID - SG - AU (Sydney) - ${code}`;
+                transit = 4;
+            }
+        } else {
+            // World -> ID
+            if (region === 'EU') {
+                route = `${code} - DE (Cologne) - CN - SG - ID`;
+                transit = 5;
+            } else if (region === 'AM') {
+                route = `${code} - US (Louisville) - HK - SG - ID`;
+                transit = 7;
+            } else if (region === 'EA') {
+                route = `${code} - CN (Shenzhen) - SG - ID`;
+                transit = 4;
+            } else if (region === 'SEA') {
+                route = `${code} - SG - ID`;
+                transit = 2;
+            } else if (region === 'ME') {
+                route = `${code} - AE (Dubai) - CN - SG - ID`;
+                transit = 5;
+            } else if (region === 'OC') {
+                route = `${code} - AU - SG - ID`;
+                transit = 4;
+            }
+        }
+
+        // Add 1 day for non-Saver services just as a heuristic?
+        if (serviceType === 'expedited') transit += 2;
+
+        return { transit, route };
     }
 
 
