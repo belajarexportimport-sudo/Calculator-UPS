@@ -2535,6 +2535,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 2. Lookup Min Rate
+        /* 
+        // DISABLED PER USER REQUEST (No Minimum Rate Lookup)
+        // 2. Lookup Min Rate
         if (zone && RATES[shipmentType] && RATES[shipmentType][serviceType] && RATES[shipmentType][serviceType][zone]) {
             const tableMinRate = RATES[shipmentType][serviceType][zone]['min'];
             if (typeof tableMinRate === 'number' && tableMinRate > 0) {
@@ -2547,6 +2550,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
+        */
 
         // Shipment Level Surcharges
         let brokerageCost = 0;
