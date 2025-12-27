@@ -29,6 +29,53 @@
             </div>
         </header>
 
+        <!-- PRINT HEADER (Only Visible on Print) -->
+        <div id="print-header"
+            style="display:none; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h2 style="margin:0; color:#442e25; font-size: 24pt;">UPS Rate Calculator</h2>
+                    <p style="margin:2px 0; font-size:10pt; color: #666;">Authorized Shipping Partner</p>
+
+                    <!-- Shipment Details Table -->
+                    <table style="margin-top: 15px; font-size: 10pt; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding-right:10px;"><strong>Origin:</strong></td>
+                            <td id="print-origin">-</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-right:10px;"><strong>Destination:</strong></td>
+                            <td id="print-dest">-</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-right:10px;"><strong>Service:</strong></td>
+                            <td id="print-service">-</td>
+                        </tr>
+                        <tr>
+                            <td style="padding-right:10px;"><strong>Weight:</strong></td>
+                            <td id="print-weight">-</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="text-align: right;">
+                    <h1 style="margin:0; font-size:18pt; text-transform:uppercase; color: #8B0000;">Official Quotation
+                    </h1>
+                    <p style="margin:5px 0; font-size: 10pt;">Date: <span id="print-date"></span></p>
+                    <div
+                        style="margin-top: 10px; border: 1px solid #ccc; padding: 10px; width: 200px; text-align: left; float: right;">
+                        <strong style="font-size: 9pt; color: #555;">Prepared For:</strong><br>
+                        <span id="print-customer" style="font-size: 12pt; font-weight: bold;">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRINT FOOTER (Copyright) -->
+        <div id="print-footer"
+            style="display:none; position: fixed; bottom: 0; width: 100%; text-align: center; font-size: 9pt; color: #888; border-top: 1px solid #ddd; padding-top: 5px;">
+            &copy; lynk.id/exportimport | UPS Rate Calculator
+        </div>
+
         <!-- Scripts for Duty Tax Data -->
         <script src="hs_data.js"></script>
         <script src="kurs_data.js"></script>
@@ -38,7 +85,7 @@
                 <!-- Left Column: Shipment & Rates -->
                 <div class="left-col">
                     <!-- Shipment Detail -->
-                    <div class="section-box">
+                    <div class="section-box print-hidden">
                         <div class="section-header">Shipment Detail</div>
                         <div class="section-content">
                             <div class="input-row">
@@ -127,7 +174,86 @@
                     </div>
 
                     <!-- Rates Component -->
+                    <!-- Moved Package Table -->
                     <div class="section-box">
+                        <div class="section-header">Dimension (cm) & Weight (kg)</div>
+                        <div class="table-responsive">
+                            <table class="package-table">
+                                <thead>
+                                    <tr>
+                                        <th>Qty</th>
+                                        <th>L</th>
+                                        <th>W</th>
+                                        <th>H</th>
+                                        <th>Girth</th>
+                                        <th>Weight</th>
+                                        <th>C.Weight</th>
+                                        <th>Type</th>
+                                        <th style="width:30px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="package-rows">
+                                    <tr>
+                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
+                                        </td>
+                                        <td><input type="number" class="pkg-length" step="any"></td>
+                                        <td><input type="number" class="pkg-width" step="any"></td>
+                                        <td><input type="number" class="pkg-height" step="any"></td>
+                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
+                                        </td>
+                                        <td><input type="number" class="pkg-weight" step="any"></td>
+                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
+                                        </td>
+                                        <td><select class="pkg-type">
+                                                <option value="box">Box</option>
+                                                <option value="styrofoam">Styrofoam Box</option>
+                                                <option value="sack">Sack / Karung</option>
+                                                <option value="pail">Pail / Ember</option>
+                                                <option value="cylinder">Cylinder</option>
+                                                <option value="trapezium">Trapezium</option>
+                                                <option value="drum">Drum</option>
+                                                <option value="other">Other</option>
+                                            </select></td>
+                                        <td style="text-align:center;">
+                                            <button type="button" class="btn-remove-row"
+                                                style="background:none; border:none; cursor:pointer; color:red; font-weight:bold; font-size:1.2em;"
+                                                onclick="removePackageRow(this)">×</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button type="button" onclick="addPackageRow()"
+                                style="margin-top:5px; width:100%; padding:5px; background:#f0f0f0; border:1px dashed #ccc; cursor:pointer; color:#0645ad;">+
+                                Tambah Collie / Box</button>
+                        </div>
+                    </div>
+                    <div id="wwef-unavailable-overlay"
+                        style="display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background-color: rgba(255, 235, 238, 0.98); border: 3px solid #ef5350; border-radius: 8px; padding: 30px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; min-width: 400px;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #c62828; margin-bottom: 10px;">
+                            Service WWEF Tidak Tersedia
+                        </div>
+                        <div style="font-size: 1em; color: #c62828;">
+                            untuk negara ini
+                        </div>
+                    </div>
+
+                    <!-- WWEF Limit Exceeded Blocking Overlay -->
+                    <div id="wwef-limit-overlay"
+                        style="display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; background-color: rgba(255, 243, 205, 0.98); border: 3px solid #ff9800; border-radius: 8px; padding: 30px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; min-width: 450px; max-width: 500px;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
+                        <div style="font-size: 1.3em; font-weight: bold; color: #e65100; margin-bottom: 10px;">
+                            Warning: Dimensi/Berat Melebihi Batas</div>
+                        <div id="wwef-limit-details" style="text-align: left; margin-bottom: 20px;">
+                        </div>
+                        <button onclick="document.getElementById('wwef-limit-overlay').style.display='none'"
+                            class="ups-btn">Tutup</button>
+                    </div>
+
+                    <!-- Threshold Warning Container -->
+
+                    <!-- Rates Component -->
+                    <div class="section-box print-hidden">
                         <div class="section-header">Rates Component
                         </div>
                         <div class="section-content">
@@ -191,8 +317,41 @@
                         </div>
                     </div>
 
+
+
+                    <!-- Optional Surcharges -->
+                    <div class="section-box print-hidden">
+                        <div class="section-header">Optional Surcharges</div>
+                        <div class="section-content">
+                            <div class="optional-section" id="dropdown-options">
+                                <label class="checkbox-item"><input type="checkbox" id="check-ea" value="extendedArea">
+                                    Extended
+                                    Area</label>
+                                <label class="checkbox-item"><input type="checkbox" id="check-ra" value="remoteArea">
+                                    Remote
+                                    Area</label>
+                                <label class="checkbox-item"><input type="checkbox" value="peb"> PEB</label>
+                                <label class="checkbox-item"><input type="checkbox" value="residential">
+                                    Residential (Saver & Expedited)</label>
+                                <label class="checkbox-item"><input type="checkbox" value="residential_wwef">
+                                    Residential (WWEF)</label>
+                                <label class="checkbox-item"><input type="checkbox" value="adultSignature"> Adult
+                                    Signature</label>
+                                <label class="checkbox-item"><input type="checkbox" value="deliveryConfirmation">
+                                    Delivery Confirmation</label>
+                                <label class="checkbox-item"><input type="checkbox" value="alternateBroker">
+                                    Alternate
+                                    Broker</label>
+                                <label class="checkbox-item"><input type="checkbox" value="dutyTaxForward"> Duty Tax
+                                    Forward</label>
+                                <label class="checkbox-item"><input type="checkbox" value="ipf"> IPF</label>
+                                <label class="checkbox-item"><input type="checkbox" value="paperInvoice"> Paper
+                                    Invoice</label>
+                            </div>
+                        </div>
+                    </div>
                     <!-- OPTIONAL: DUTY & TAX SECTION -->
-                    <div class="section-box">
+                    <div class="section-box print-hidden">
                         <div class="section-header"
                             style="display:flex; justify-content:space-between; align-items:center;">
                             <span>Est. Import Duty & Tax</span>
@@ -459,309 +618,14 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Optional Surcharges -->
-                    <div class="section-box">
-                        <div class="section-header">Optional Surcharges</div>
-                        <div class="section-content">
-                            <div class="optional-section" id="dropdown-options">
-                                <label class="checkbox-item"><input type="checkbox" value="extendedArea"> Extended
-                                    Area</label>
-                                <label class="checkbox-item"><input type="checkbox" value="remoteArea"> Remote
-                                    Area</label>
-                                <label class="checkbox-item"><input type="checkbox" value="peb"> PEB</label>
-                                <label class="checkbox-item"><input type="checkbox" value="residential">
-                                    Residential (Saver & Expedited)</label>
-                                <label class="checkbox-item"><input type="checkbox" value="residential_wwef">
-                                    Residential (WWEF)</label>
-                                <label class="checkbox-item"><input type="checkbox" value="adultSignature"> Adult
-                                    Signature</label>
-                                <label class="checkbox-item"><input type="checkbox" value="deliveryConfirmation">
-                                    Delivery Confirmation</label>
-                                <label class="checkbox-item"><input type="checkbox" value="alternateBroker">
-                                    Alternate
-                                    Broker</label>
-                                <label class="checkbox-item"><input type="checkbox" value="dutyTaxForward"> Duty Tax
-                                    Forward</label>
-                                <label class="checkbox-item"><input type="checkbox" value="ipf"> IPF</label>
-                                <label class="checkbox-item"><input type="checkbox" value="paperInvoice"> Paper
-                                    Invoice</label>
-                            </div>
-                        </div>
-                    </div>
                 </div>
+
 
                 <!-- Right Column: Dimensions & Results -->
                 <div class="right-col">
-                    <!-- Dimension Table -->
-                    <div class="section-box">
-                        <div class="section-header">Dimension (cm) & Weight (kg)</div>
-                        <div class="table-responsive">
-                            <table class="package-table">
-                                <thead>
-                                    <tr>
-                                        <th>Qty</th>
-                                        <th>L</th>
-                                        <th>W</th>
-                                        <th>H</th>
-                                        <th>Girth</th>
-                                        <th>Weight</th>
-                                        <th>C.Weight</th>
-                                        <th>Type</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="package-rows">
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input type="number" class="pkg-qty" value="1" min="1" style="width:50px;">
-                                        </td>
-                                        <td><input type="number" class="pkg-length" step="any"></td>
-                                        <td><input type="number" class="pkg-width" step="any"></td>
-                                        <td><input type="number" class="pkg-height" step="any"></td>
-                                        <td><input type="number" class="pkg-girth" readonly style="background:#eee;">
-                                        </td>
-                                        <td><input type="number" class="pkg-weight" step="any"></td>
-                                        <td><input type="number" class="pkg-cweight" readonly style="background:#eee;">
-                                        </td>
-                                        <td><select class="pkg-type">
-                                                <option value="box">Box</option>
-                                                <option value="styrofoam">Styrofoam Box</option>
-                                                <option value="sack">Sack / Karung</option>
-                                                <option value="pail">Pail / Ember</option>
-                                                <option value="cylinder">Cylinder</option>
-                                                <option value="trapezium">Trapezium</option>
-                                                <option value="drum">Drum</option>
-                                                <option value="other">Other</option>
-                                            </select></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div id="wwef-unavailable-overlay"
-                            style="display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background-color: rgba(255, 235, 238, 0.98); border: 3px solid #ef5350; border-radius: 8px; padding: 30px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; min-width: 400px;">
-                            <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
-                            <div style="font-size: 1.3em; font-weight: bold; color: #c62828; margin-bottom: 10px;">
-                                Service WWEF Tidak Tersedia
-                            </div>
-                            <div style="font-size: 1em; color: #c62828;">
-                                untuk negara ini
-                            </div>
-                        </div>
-
-                        <!-- WWEF Limit Exceeded Blocking Overlay -->
-                        <div id="wwef-limit-overlay"
-                            style="display:none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1001; background-color: rgba(255, 243, 205, 0.98); border: 3px solid #ff9800; border-radius: 8px; padding: 30px 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; min-width: 450px; max-width: 500px;">
-                            <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
-                            <div style="font-size: 1.3em; font-weight: bold; color: #e65100; margin-bottom: 10px;">
-                                Warning: Dimensi/Berat Melebihi Batas</div>
-                            <div id="wwef-limit-details" style="text-align: left; margin-bottom: 20px;">
-                            </div>
-                            <button onclick="document.getElementById('wwef-limit-overlay').style.display='none'"
-                                class="ups-btn">Tutup</button>
-                        </div>
-
-                        <!-- NEW: Threshold Warning Container (For LPS/AHS) -->
-
-
-
-                    </div>
+                    <!-- Calculate Button -->
+                    <button type="button" class="btn-calculate" onclick="calculate();"
+                        style="width: 100%; margin-top: 10px; margin-bottom: 10px; background: #8B0000; color: #fff; font-size: 18px; font-weight: bold; padding: 12px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); border: none; text-transform: uppercase; letter-spacing: 2px; border-radius: 4px;">CALCULATE</button>
 
                     <!-- Calculation Result (Moved to Right Column) -->
                     <div class="section-box" style="margin-top: 20px;">
@@ -848,464 +712,103 @@
                                         style="font-size: 0.85em; color: #666; word-break: break-all;">-</span>
                                 </div>
                             </div>
+
+                            <!-- CUSTOMER NAME INPUT (Visible) -->
+                            <div class="no-print"
+                                style="margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                                <label for="input-customer-name"
+                                    style="display: block; font-weight: bold; margin-bottom: 5px; color: #555;">Customer
+                                    Name (for Quote):</label>
+                                <input type="text" id="input-customer-name" placeholder="E.g. PT. Maju Mundur"
+                                    style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+
+                            <!-- PRINT BUTTON (Visible on Screen, Hidden on Print) -->
+                            <button type="button" class="btn-print no-print" onclick="window.print()"
+                                style="margin-top: 10px; width: 100%; padding: 10px; background: #333; color: white; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase;">
+                                📄 Download / Print Official Quote
+                            </button>
+
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-calculate"
-                        style="width: 100%; margin-top: 20px; background: #8B0000; color: #fff; font-size: 20px; font-weight: bold; padding: 15px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); border: none; text-transform: uppercase; letter-spacing: 2px;">CALCULATE</button>
+                    <!-- TERMS & CONDITIONS BOX -->
+                    <div class="section-box"
+                        style="margin-top: 20px; border: 1px solid #ccc; background-color: #f8f9fa;">
+                        <div class="section-header"
+                            style="background-color: #e9ecef; color: #495057; font-size: 0.9em;">
+                            Syarat & Ketentuan (Terms & Conditions)
+                        </div>
+                        <div class="section-content" style="font-size: 0.8em; color: #555; line-height: 1.5;">
+                            <ul style="padding-left: 15px; margin: 0;">
+                                <li id="tc-components" style="margin-bottom: 5px;">
+                                    <strong>Komponen Biaya:</strong> Estimasi harga di atas <strong>SUDAH
+                                        TERMASUK</strong> Basic Rate, Fuel Surcharge (FSI), PPN (VAT) 1.1%, serta
+                                    surcharge lain jika terdeteksi (seperti: Brokerage Import, Surge Fee, Additional
+                                    Handling Surcharge, Large Package Surcharge, Remote/Extended Area).
+                                </li>
+                                <li id="tc-duty-disclaimer" style="margin-bottom: 5px;">
+                                    <strong>Pengecualian:</strong> Harga <strong>BELUM TERMASUK</strong> Bea Masuk
+                                    (Duty) & Pajak Impor (Tax) negara tujuan, biaya penyimpanan gudang (storage), atau
+                                    biaya tak terduga lainnya akibat pemeriksaan pabean.
+                                </li>
+                                <li style="margin-bottom: 5px;">
+                                    <strong>Akurasi Data:</strong> Perhitungan berdasarkan data berat dan dimensi yang
+                                    Anda input. Penyesuaian harga dapat terjadi jika hasil penimbangan operasional UPS
+                                    berbeda dengan input Anda.
+                                </li>
+                                <li id="tc-wwef-disclaimer">
+                                    <strong>Service WWEF:</strong> Untuk berat >70kg/collie atau total dimensi besar,
+                                    UPS berhak mengalihkan ke layanan Freight (WWEF) dengan ketentuan minimum 71kg per
+                                    collie.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-        </form>
 
-        <!-- Warning Messages -->
-        <div id="omx-options" class="warning-box" style="display:none;">
-            <h4>Opsi Berat >= 70kg atau Batas Terlampaui</h4>
-            <p>Pengiriman ini memenuhi syarat untuk Worldwide Express Freight (WWEF) yang menghapus biaya tambahan
-                tertentu.</p>
-            <div class="comparison-options">
-                <div class="option-box" id="opt-a">
-                    <p id="opt-a-text"><strong>Opsi 1 (WWEF):</strong> -</p>
-                </div>
-                <div class="option-box" id="opt-b">
-                    <p id="opt-b-text"><strong>Opsi 2 (Saver):</strong> -</p>
-                </div>
+    </div>
+    </div>
+
+    </form>
+
+    <!-- Warning Messages -->
+    <div id="omx-options" class="warning-box" style="display:none;">
+        <h4>Opsi Berat >= 70kg atau Batas Terlampaui</h4>
+        <p>Pengiriman ini memenuhi syarat untuk Worldwide Express Freight (WWEF) yang menghapus biaya tambahan
+            tertentu.</p>
+        <div class="comparison-options">
+            <div class="option-box" id="opt-a">
+                <p id="opt-a-text"><strong>Opsi 1 (WWEF):</strong> -</p>
+            </div>
+            <div class="option-box" id="opt-b">
+                <p id="opt-b-text"><strong>Opsi 2 (Saver):</strong> -</p>
             </div>
         </div>
+    </div>
 
-        <div id="mixed-warning" class="warning-box"
-            style="display:none; background-color: #fff3cd; color: #856404; border-color: #ffeeba;">
-            <h4>Peringatan Paket Campuran</h4>
-            <p>Pengiriman Anda berisi paket Berat/Besar DAN Ringan/Kecil. Disarankan untuk memisahkannya menjadi dua
-                pengiriman berbeda (Satu WWEF, Satu Saver) untuk menghindari biaya minimum 71kg yang diterapkan pada
-                paket kecil.</p>
-        </div>
+    <div id="mixed-warning" class="warning-box"
+        style="display:none; background-color: #fff3cd; color: #856404; border-color: #ffeeba;">
+        <h4>Peringatan Paket Campuran</h4>
+        <p>Pengiriman Anda berisi paket Berat/Besar DAN Ringan/Kecil. Disarankan untuk memisahkannya menjadi dua
+            pengiriman berbeda (Satu WWEF, Satu Saver) untuk menghindari biaya minimum 71kg yang diterapkan pada
+            paket kecil.</p>
+    </div>
 
 
 
-        <div id="debug-output"
-            style="margin-top: 20px; padding: 10px; background: #f0f0f0; border: 1px solid #ccc; font-family: monospace; white-space: pre-wrap; display: none;">
-        </div>
+    <div id="debug-output"
+        style="margin-top: 20px; padding: 10px; background: #f0f0f0; border: 1px solid #ccc; font-family: monospace; white-space: pre-wrap; display: none;">
+    </div>
 
     </div>
 
     <datalist id="country-list">
-        <!-- Americas -->
-        <option value="United States">
-        <option value="Canada">
-        <option value="Mexico">
-        <option value="Brazil">
-        <option value="Argentina">
-        <option value="Chile">
-        <option value="Colombia">
-        <option value="Peru">
-        <option value="Venezuela">
-        <option value="Ecuador">
-        <option value="Bolivia">
-        <option value="Paraguay">
-        <option value="Uruguay">
-        <option value="Costa Rica">
-        <option value="Panama">
-        <option value="Guatemala">
-        <option value="Honduras">
-        <option value="Nicaragua">
-        <option value="El Salvador">
-        <option value="Dominican Republic">
-        <option value="Puerto Rico">
-        <option value="Jamaica">
-        <option value="Trinidad and Tobago">
-        <option value="Bahamas">
-        <option value="Barbados">
-        <option value="Haiti">
-        <option value="Guyana">
-        <option value="Suriname">
-        <option value="Belize">
-        <option value="French Guiana">
-        <option value="Grenada">
-        <option value="St. Lucia">
-        <option value="St. Vincent">
-        <option value="Antigua and Barbuda">
-        <option value="Dominica">
-        <option value="St. Kitts">
-        <option value="Aruba">
-        <option value="Curacao">
-        <option value="Bonaire">
-        <option value="Cayman Islands">
-        <option value="Bermuda">
-        <option value="Anguilla">
-        <option value="British Virgin Islands">
-        <option value="Montserrat">
-        <option value="Turks and Caicos">
-        <option value="Guadeloupe">
-        <option value="Martinique">
-        <option value="St. Barthelemy">
-        <option value="St. Maarten">
-
-            <!-- Europe -->
-        <option value="United Kingdom">
-        <option value="France">
-        <option value="Germany">
-        <option value="Italy">
-        <option value="Spain">
-        <option value="Netherlands">
-        <option value="Belgium">
-        <option value="Switzerland">
-        <option value="Austria">
-        <option value="Poland">
-        <option value="Sweden">
-        <option value="Norway">
-        <option value="Denmark">
-        <option value="Finland">
-        <option value="Ireland">
-        <option value="Portugal">
-        <option value="Greece">
-        <option value="Czech Republic">
-        <option value="Hungary">
-        <option value="Romania">
-        <option value="Bulgaria">
-        <option value="Slovakia">
-        <option value="Croatia">
-        <option value="Slovenia">
-        <option value="Serbia">
-        <option value="Bosnia and Herzegovina">
-        <option value="Montenegro">
-        <option value="North Macedonia">
-        <option value="Albania">
-        <option value="Kosovo">
-        <option value="Lithuania">
-        <option value="Latvia">
-        <option value="Estonia">
-        <option value="Iceland">
-        <option value="Luxembourg">
-        <option value="Monaco">
-        <option value="Liechtenstein">
-        <option value="San Marino">
-        <option value="Vatican City">
-        <option value="Malta">
-        <option value="Cyprus">
-        <option value="Andorra">
-        <option value="Belarus">
-        <option value="Ukraine">
-        <option value="Moldova">
-        <option value="Russia">
-        <option value="Turkey">
-        <option value="Gibraltar">
-        <option value="Faroe Islands">
-        <option value="Greenland">
-        <option value="Canary Islands">
-        <option value="Azores">
-        <option value="Madeira">
-
-            <!-- Asia Pacific -->
-        <option value="China">
-        <option value="Southern China">
-        <option value="Japan">
-        <option value="South Korea">
-        <option value="Taiwan">
-        <option value="Hong Kong">
-        <option value="Macau">
-        <option value="Singapore">
-        <option value="Malaysia">
-        <option value="Thailand">
-        <option value="Vietnam">
-        <option value="Philippines">
-        <option value="Indonesia">
-        <option value="India">
-        <option value="Pakistan">
-        <option value="Bangladesh">
-        <option value="Sri Lanka">
-        <option value="Myanmar">
-        <option value="Cambodia">
-        <option value="Laos">
-        <option value="Brunei">
-        <option value="Australia">
-        <option value="New Zealand">
-        <option value="Papua New Guinea">
-        <option value="Fiji">
-        <option value="New Caledonia">
-        <option value="Samoa">
-        <option value="Guam">
-        <option value="Northern Mariana Islands">
-        <option value="American Samoa">
-        <option value="Nepal">
-        <option value="Bhutan">
-        <option value="Maldives">
-        <option value="Mongolia">
-        <option value="Norfolk Island">
-
-            <!-- ISMEA (Israel, South Africa, Middle East, Africa) -->
-        <option value="Israel">
-        <option value="United Arab Emirates">
-        <option value="Saudi Arabia">
-        <option value="Qatar">
-        <option value="Kuwait">
-        <option value="Bahrain">
-        <option value="Oman">
-        <option value="Jordan">
-        <option value="Lebanon">
-        <option value="Iraq">
-        <option value="Yemen">
-        <option value="South Africa">
-        <option value="Egypt">
-        <option value="Morocco">
-        <option value="Tunisia">
-        <option value="Algeria">
-        <option value="Libya">
-        <option value="Kenya">
-        <option value="Nigeria">
-        <option value="Ghana">
-        <option value="Ethiopia">
-        <option value="Tanzania">
-        <option value="Uganda">
-        <option value="Zambia">
-        <option value="Zimbabwe">
-        <option value="Botswana">
-        <option value="Namibia">
-        <option value="Mozambique">
-        <option value="Angola">
-        <option value="Cameroon">
-        <option value="Senegal">
-        <option value="Mali">
-        <option value="Niger">
-        <option value="Chad">
-        <option value="Sudan">
-        <option value="Mauritius">
-        <option value="Seychelles">
-        <option value="Madagascar">
-        <option value="Reunion">
-        <option value="Mayotte">
-        <option value="Comoros">
-        <option value="Djibouti">
-        <option value="Eritrea">
-        <option value="Somalia">
-        <option value="Rwanda">
-        <option value="Burundi">
-        <option value="Malawi">
-        <option value="Lesotho">
-        <option value="Swaziland">
-        <option value="Gabon">
-        <option value="Congo">
-        <option value="Central African Republic">
-        <option value="Equatorial Guinea">
-        <option value="Sao Tome and Principe">
-        <option value="Cape Verde">
-        <option value="Gambia">
-        <option value="Guinea">
-        <option value="Guinea-Bissau">
-        <option value="Sierra Leone">
-        <option value="Liberia">
-        <option value="Cote d'Ivoire">
-        <option value="Burkina Faso">
-        <option value="Togo">
-        <option value="Benin">
-        <option value="Mauritania">
-
-            <!-- Central Asia & Caucasus -->
-        <option value="Kazakhstan">
-        <option value="Uzbekistan">
-        <option value="Turkmenistan">
-        <option value="El Salvador">
-        <option value="Dominican Republic">
-        <option value="Puerto Rico">
-        <option value="Jamaica">
-        <option value="Trinidad and Tobago">
-        <option value="Bahamas">
-        <option value="Barbados">
-        <option value="Haiti">
-        <option value="Guyana">
-        <option value="Suriname">
-        <option value="Belize">
-        <option value="French Guiana">
-        <option value="Grenada">
-        <option value="St. Lucia">
-        <option value="St. Vincent">
-        <option value="Antigua and Barbuda">
-        <option value="Dominica">
-        <option value="St. Kitts">
-        <option value="Aruba">
-        <option value="Curacao">
-        <option value="Bonaire">
-        <option value="Cayman Islands">
-        <option value="Bermuda">
-        <option value="Anguilla">
-        <option value="British Virgin Islands">
-        <option value="Montserrat">
-        <option value="Turks and Caicos">
-        <option value="Guadeloupe">
-        <option value="Martinique">
-        <option value="St. Barthelemy">
-        <option value="St. Maarten">
-
-            <!-- Europe -->
-        <option value="United Kingdom">
-        <option value="France">
-        <option value="Germany">
-        <option value="Italy">
-        <option value="Spain">
-        <option value="Netherlands">
-        <option value="Belgium">
-        <option value="Switzerland">
-        <option value="Austria">
-        <option value="Poland">
-        <option value="Sweden">
-        <option value="Norway">
-        <option value="Denmark">
-        <option value="Finland">
-        <option value="Ireland">
-        <option value="Portugal">
-        <option value="Greece">
-        <option value="Czech Republic">
-        <option value="Hungary">
-        <option value="Romania">
-        <option value="Bulgaria">
-        <option value="Slovakia">
-        <option value="Croatia">
-        <option value="Slovenia">
-        <option value="Serbia">
-        <option value="Bosnia and Herzegovina">
-        <option value="Montenegro">
-        <option value="North Macedonia">
-        <option value="Albania">
-        <option value="Kosovo">
-        <option value="Lithuania">
-        <option value="Latvia">
-        <option value="Estonia">
-        <option value="Iceland">
-        <option value="Luxembourg">
-        <option value="Monaco">
-        <option value="Liechtenstein">
-        <option value="San Marino">
-        <option value="Vatican City">
-        <option value="Malta">
-        <option value="Cyprus">
-        <option value="Andorra">
-        <option value="Belarus">
-        <option value="Ukraine">
-        <option value="Moldova">
-        <option value="Russia">
-        <option value="Turkey">
-        <option value="Gibraltar">
-        <option value="Faroe Islands">
-        <option value="Greenland">
-        <option value="Canary Islands">
-        <option value="Azores">
-        <option value="Madeira">
-
-            <!-- Asia Pacific -->
-        <option value="China">
-        <option value="Southern China">
-        <option value="Japan">
-        <option value="South Korea">
-        <option value="Taiwan, China">
-        <option value="Hong Kong">
-        <option value="Macau">
-        <option value="Singapore">
-        <option value="Malaysia">
-        <option value="Thailand">
-        <option value="Vietnam">
-        <option value="Philippines">
-        <option value="Indonesia">
-        <option value="India">
-        <option value="Pakistan">
-        <option value="Bangladesh">
-        <option value="Sri Lanka">
-        <option value="Myanmar">
-        <option value="Cambodia">
-        <option value="Laos">
-        <option value="Brunei">
-        <option value="Australia">
-        <option value="New Zealand">
-        <option value="Papua New Guinea">
-        <option value="Fiji">
-        <option value="New Caledonia">
-        <option value="Samoa">
-        <option value="Guam">
-        <option value="Northern Mariana Islands">
-        <option value="American Samoa">
-        <option value="Nepal">
-        <option value="Bhutan">
-        <option value="Maldives">
-        <option value="Mongolia">
-        <option value="Norfolk Island">
-
-            <!-- ISMEA (Israel, South Africa, Middle East, Africa) -->
-        <option value="Israel">
-        <option value="United Arab Emirates">
-        <option value="Saudi Arabia">
-        <option value="Qatar">
-        <option value="Kuwait">
-        <option value="Bahrain">
-        <option value="Oman">
-        <option value="Jordan">
-        <option value="Lebanon">
-        <option value="Iraq">
-        <option value="Yemen">
-        <option value="South Africa">
-        <option value="Egypt">
-        <option value="Morocco">
-        <option value="Tunisia">
-        <option value="Algeria">
-        <option value="Libya">
-        <option value="Kenya">
-        <option value="Nigeria">
-        <option value="Ghana">
-        <option value="Ethiopia">
-        <option value="Tanzania">
-        <option value="Uganda">
-        <option value="Zambia">
-        <option value="Zimbabwe">
-        <option value="Botswana">
-        <option value="Namibia">
-        <option value="Mozambique">
-        <option value="Angola">
-        <option value="Cameroon">
-        <option value="Senegal">
-        <option value="Mali">
-        <option value="Niger">
-        <option value="Chad">
-        <option value="Sudan">
-        <option value="Mauritius">
-        <option value="Seychelles">
-        <option value="Madagascar">
-        <option value="Reunion">
-        <option value="Mayotte">
-        <option value="Comoros">
-        <option value="Djibouti">
-        <option value="Eritrea">
-        <option value="Somalia">
-        <option value="Rwanda">
-        <option value="Burundi">
-        <option value="Malawi">
-        <option value="Lesotho">
-        <option value="Swaziland">
-        <option value="Gabon">
-        <option value="Congo">
-        <option value="Central African Republic">
-        <option value="Equatorial Guinea">
-        <option value="Sao Tome and Principe">
-        <option value="Cape Verde">
-        <option value="Gambia">
-        <option value="Guinea">
-        <option value="Guinea-Bissau">
-        <option value="Sierra Leone">
-        <option value="Liberia">
-        <option value="Cote d'Ivoire">
-        <option value="Burkina Faso">
-        <option value="Togo">
-        <option value="Benin">
-        <option value="Mauritania">
-
-            <!-- Central Asia & Caucasus -->
-        <option value="Kazakhstan">
-        <option value="Uzbekistan">
-        <option value="Turkmenistan">
-        <option value="Kyrgyzstan">
-        <option value="Tajikistan">
-        <option value="Afghanistan">
-        <option value="Armenia">
-        <option value="Azerbaijan">
-        <option value="Georgia">
+        <!-- Options will be populated dynamically by script.js -->
     </datalist>
+
 
     <datalist id="originCities"></datalist>
     <datalist id="destCities"></datalist>

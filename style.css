@@ -51,7 +51,7 @@ header h1 {
 /* Main Grid Layout */
 .main-grid {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 1fr 350px;
     gap: 20px;
     align-items: start;
 }
@@ -62,9 +62,11 @@ header h1 {
     top: 20px;
     align-self: start;
     height: auto;
-    max-height: 95vh;
+    max-height: 90vh;
     overflow-y: auto;
     /* Allow scroll if sidebar is too tall */
+    padding-right: 5px;
+    /* Space for scrollbar */
 }
 
 /* Section Styling */
@@ -246,6 +248,16 @@ header h1 {
         gap: 15px;
     }
 
+    .right-col {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        border-left: none;
+        /* Remove border if I added one */
+        padding-right: 0;
+    }
+
+
     /* Adjust header for mobile */
     header div {
         flex-direction: column;
@@ -339,5 +351,255 @@ header h1 {
         min-width: 90% !important;
         width: 90% !important;
         padding: 20px !important;
+    }
+}
+
+/* Calculate Button Active State (Emboss Effect) */
+.btn-calculate {
+    cursor: pointer;
+    transition: all 0.1s ease;
+}
+
+.btn-calculate:active {
+    transform: translateY(3px) scale(0.98) !important;
+    box-shadow: inset 0 3px 8px rgba(0, 0, 0, 0.6) !important;
+    background: #600000 !important;
+}
+
+/* Pulse Animation to grab attention */
+@keyframes pulse-red {
+    0% {
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(139, 0, 0, 0.8);
+    }
+
+    100% {
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.btn-calculate {
+    animation: pulse-red 2s infinite;
+}
+
+.btn-calculate:hover {
+    animation: none;
+    /* Stop pulsing on hover so user can click steadily */
+    transform: scale(1.02);
+}
+
+/* --- PRINT STYLES (Official PDF Quote) --- */
+@media print {
+
+    /* Hide Non-Essential UI */
+    /* Hide Non-Essential UI */
+    .no-print,
+    .btn-calculate,
+    .btn-print,
+    header,
+    .print-hidden,
+    /* Explicit class for hiding inputs */
+    /* Left Column (Inputs) */
+    .optional-section,
+    #wwef-notification,
+    #no-service-warning {
+        display: none !important;
+    }
+
+    /* Reset Body & Layout */
+    body {
+        font-family: 'Times New Roman', serif;
+        /* Formal Look */
+        background: white;
+        padding: 0;
+        margin: 0;
+        font-size: 12pt;
+    }
+
+    .container {
+        border: none;
+        box-shadow: none;
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+    }
+
+    /* Show Print Header */
+    #print-header {
+        display: block !important;
+    }
+
+    /* RETURN TO STACKED LAYOUT (Table Top, Results Bottom) */
+    .main-grid {
+        display: block !important;
+    }
+
+    /* Prevent Left Column Blowout */
+    .left-col {
+        min-width: 0;
+    }
+
+    /* V48: Compact Package Table for Print */
+    .package-table th,
+    .package-table td {
+        padding: 4px 2px !important;
+        font-size: 9pt !important;
+        border: 1px solid #ccc !important;
+    }
+
+    /* Hide Border/Background of inputs for clean print */
+    .package-table input {
+        font-size: 9pt !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        width: auto !important;
+        max-width: 100%;
+    }
+
+    /* Hide Delete Button Column */
+    .package-table th:last-child,
+    .package-table td:last-child {
+        display: none !important;
+    }
+
+    /* HIDE NON-ESSENTIAL COLUMNS TO FIT PDF */
+    /* Hide Girth Column (5th child) */
+    .package-table th:nth-child(5),
+    .package-table td:nth-child(5) {
+        display: none !important;
+    }
+
+    /* Hide Type Column (8th child) */
+    .package-table th:nth-child(8),
+    .package-table td:nth-child(8) {
+        display: none !important;
+    }
+
+    /* Hide "Tambah Collie" Button */
+    .table-responsive>button {
+        display: none !important;
+    }
+
+    /* Remove Scrollbar from Table Container */
+    .table-responsive {
+        overflow: visible !important;
+        display: block !important;
+    }
+
+    /* Helper to hide Girth (Optional to save space) */
+    /* .package-table th:nth-child(6), .package-table td:nth-child(6) { display: none !important; } */
+
+    .right-col {
+        width: 100% !important;
+        margin-top: 15px !important;
+        font-size: 10pt;
+    }
+
+    /* SPLIT RESULT SECTION: Warnings Left, Costs Right */
+    .right-col .section-box {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    /* Header spans full width */
+    .right-col .section-box .section-header {
+        grid-column: 1 / -1;
+        margin-bottom: 10px;
+        border-bottom: 2px solid #333;
+    }
+
+    /* Warnings in First Column */
+    #heavy-warning,
+    #lps-warning-box,
+    #mixed-warning,
+    #wwef-unavailable-overlay {
+        grid-column: 1;
+        align-self: start;
+        margin: 0 !important;
+        margin-bottom: 10px !important;
+    }
+
+    /* Cost Breakdown in Second Column */
+    #results {
+        grid-column: 2;
+        /* Force row 2 to ensure it aligns with warnings */
+        grid-row: 2 / span 10;
+        align-self: start;
+        border-left: 1px solid #ccc;
+        padding-left: 20px;
+        margin-top: 0 !important;
+    }
+
+    /* Compact Result Box */
+    .right-col .section-box {
+        margin-bottom: 10px;
+        padding: 5px;
+    }
+
+    .right-col .result-row {
+        margin-bottom: 2px;
+    }
+
+    /* Compact Warning Boxes in Print */
+    .warning-box {
+        margin: 5px 0 !important;
+        padding: 5px !important;
+        font-size: 0.85em !important;
+        border-width: 1px !important;
+    }
+
+    .warning-box h4 {
+        margin-top: 0 !important;
+        margin-bottom: 2px !important;
+        font-size: 1em !important;
+    }
+
+    .warning-box ul {
+        margin: 2px 0 !important;
+        padding-left: 15px !important;
+    }
+
+    .warning-box li {
+        margin-bottom: 2px !important;
+    }
+
+    /* Terms & Conditions */
+    #tc-components {
+        font-size: 0.9em;
+    }
+
+    /* Customer Name Input becomes text-like */
+    #customer-name {
+        border: none !important;
+        border-bottom: 1px solid #000 !important;
+        font-family: inherit;
+        font-weight: bold;
+    }
+
+    /* Fixed Print Footer */
+    #print-footer {
+        display: block !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 8pt;
+        color: #888;
+        border-top: 1px solid #ddd;
+        padding-top: 5px;
+        background: white;
+    }
+
+    /* Helper to hide empty rows */
+    .print-hidden-row {
+        display: none !important;
     }
 }

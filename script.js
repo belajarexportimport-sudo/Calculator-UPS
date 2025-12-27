@@ -736,6 +736,7 @@ function updateServiceRecommendation() {
         const height = parseFloat(row.querySelector('.pkg-height').value) || 0;
         const weight = parseFloat(row.querySelector('.pkg-weight').value) || 0;
         const qty = parseFloat(row.querySelector('.pkg-qty').value) || 1;
+        const pkgType = row.querySelector('.pkg-type') ? row.querySelector('.pkg-type').value : 'box';
 
         if (qty > 0 && (length > 0 || weight > 0)) {
             const girth = (2 * width) + (2 * height);
@@ -763,8 +764,26 @@ function updateServiceRecommendation() {
             }
 
             // WARNINGS (Near Limit) - 270 to 274 cm
-            if (length >= 270 && length <= 274) {
-                warnings.push(`Panjang ${length} cm mendekati batas maks (274 cm). Jika melebihi, akan terkena charge LPS (large package) + OMX (Over Maximum) 5.180.000`);
+
+
+            // WARNINGS (Realized Surcharges -> Blue Box)
+            // LPS (Length+Girth > 300)
+            if (lengthPlusGirth > 300 && lengthPlusGirth < 400) {
+                warnings.push(`Terkena Surcharge LPS (Length + Girth > 300 cm). Min weight 40kg berlaku.`);
+            }
+
+            // AHS (Weight > 25, Dims, Non-Box) - ONLY if not LPS/OMX (UPS Rule)
+            // Note: If we want to show AHS even if LPS is present, remove the condition. 
+            // User requested "Show all realized", so we show AHS as well if triggered.
+            // But usually LPS supersedes AHS. Let's show both for clarity if logical.
+            let ahsReasons = [];
+            if (weight > 25 && weight < 71) ahsReasons.push(`Berat > 25 kg`);
+            if (length > 122) ahsReasons.push(`Panjang > 122 cm`);
+            if (width > 76) ahsReasons.push(`Lebar > 76 cm`);
+            if (pkgType !== 'box') ahsReasons.push(`Kemasan Non-Box`);
+
+            if (ahsReasons.length > 0 && lengthPlusGirth < 380) { // <380 to ensure not WWEF territory yet? No, just show it.
+                warnings.push(`Terkena AHS: ${ahsReasons.join(', ')}`);
             }
 
             if (reasons.length > 0) {
@@ -890,7 +909,7 @@ function updateServiceRecommendation() {
             heavyWarning.style.display = 'block';
             heavyWarning.style.backgroundColor = '#e8f4f8'; // Light Blue/Info for warning
 
-            let detailsHTML = '<div style="color:#2980b9; font-weight:bold; margin-bottom:5px;">ℹ️ INFO DIMENSI</div>';
+            let detailsHTML = '<div style="color:#2980b9; font-weight:bold; margin-bottom:5px;">ℹ️ INFO SURCHARGE & DIMENSI</div>';
             detailsHTML += '<ul style="margin: 10px 0; padding-left: 20px;">';
             warningPkgs.forEach(pkg => {
                 detailsHTML += `<li><strong>Collie #${pkg.collieNumber}:</strong> ${pkg.reasons.join('; ')}</li>`;
@@ -977,8 +996,18 @@ function updateServiceAvailability() {
     // Look up country in mapping
     let effectiveCountryName = countryName;
 
+    // V48: Robust Mapping for Country Variations
+    const countryMapping = {
+        "taiwan, china": "taiwan",
+        "hong kong, china": "hong kong",
+        "macau, china": "macau"
+    };
+    if (countryMapping[countryName]) {
+        effectiveCountryName = countryMapping[countryName];
+    }
+
     // Check for China Southern Logic
-    if (countryName === 'china') {
+    if (countryName === 'china' || effectiveCountryName === 'china') {
         const postalCodeInput = trafficType === 'export' ? document.getElementById('destinationPostCode') : document.getElementById('originPostCode');
         const postalCode = postalCodeInput ? postalCodeInput.value : '';
         if (isChinaSouthern(postalCode)) {
@@ -991,7 +1020,16 @@ function updateServiceAvailability() {
 
     if (!countryData) {
         zoneDisplay.value = 'Not Found';
-        noServiceWarning.style.display = 'none';
+
+        // V49: Handle "Indonesia" specifically to clarify Domestic vs International
+        if (effectiveCountryName === 'indonesia') {
+            noServiceWarning.innerHTML = `<strong>⚠️ Info:</strong> Pengiriman Domestik (Indonesia) tidak didukung kalkulator ini.`;
+            noServiceWarning.style.display = 'block';
+        } else {
+            noServiceWarning.innerHTML = `<strong>⚠️ Warning:</strong> No service available for this country`;
+            noServiceWarning.style.display = 'none'; // Keep hidden unless truly needed or strict mode
+        }
+
         saverUnavailable.style.display = 'none';
         expeditedUnavailable.style.display = 'none';
         wwefUnavailable.style.display = 'none';
@@ -1172,6 +1210,27 @@ function checkThresholdWarnings() {
 
     let warnings = [];
 
+    // Fix: Calculate costs locally to avoid ReferenceError
+    const currentCosts = getCosts();
+    const omxLpsTotal = currentCosts.OMX + currentCosts.LPS;
+
+    // --- V43: Suppress LPS/AHS if WWEF is Active ---
+    // If the selected service is WWEF, or the weight implies WWEF (>70kg), 
+    // we should NOT show LPS/AHS warnings as they are irrelevant for Freight.
+    const serviceType = document.getElementById('serviceType').value;
+    const totalWeight = parseFloat(document.getElementById('res-total-weight').textContent) || 0;
+
+    // Explicit WWEF selection
+    // Note: We used to also suppress if totalWeight > 70, but that was incorrect for Saver/Expedited shipments.
+    // Saver shipments > 70kg (multi-piece) CAN still incur AHS/LPS on individual packages.
+    // So only suppress if the SERVICE is explicitly WWEF (Freight).
+    const isWwefContext = serviceType === 'wwef';
+
+    if (isWwefContext) {
+        thresholdWarning.style.display = 'none';
+        return;
+    }
+
     // Helper to handle commas
     const safeFloat = (val) => {
         if (typeof val === 'string') return parseFloat(val.replace(',', '.')) || 0;
@@ -1199,39 +1258,30 @@ function checkThresholdWarnings() {
                 isLpsOrOmx = true;
             }
             if (weight >= 65) {
-                packageWarnings.push(`Berat ${weight} kg mendekati/melebihi batas WWEF (71 kg). Akan wajib WWEF atau terkena OMX+LPS sebesar ${formatCurrency(omxLpsTotal)}.`);
+                // User Request Update: Specific 70kg warning
+                if (weight >= 70 && weight < 71) {
+                    packageWarnings.push(`Berat ${weight} kg mendekati limit 71kg, service WWEF (maka terkena minimum chargeable weight 71 kg / collie dan akan berlaku disemua collie).`);
+                } else {
+                    packageWarnings.push(`Berat ${weight} kg mendekati/melebihi batas WWEF (71 kg). Akan wajib WWEF atau terkena OMX+LPS sebesar ${formatCurrency(omxLpsTotal)}.`);
+                }
                 isLpsOrOmx = true;
             }
 
             if (lengthPlusGirth >= 290 && lengthPlusGirth <= 300) {
                 packageWarnings.push(`Mendekati batas Large Package Surcharge: Length + Girth = ${lengthPlusGirth.toFixed(2)} cm (Batas 300 cm).`);
             }
-            else if (lengthPlusGirth > 300 && lengthPlusGirth < 400) {
-                packageWarnings.push(`Terkena Large Package Surcharge: Length + Girth > 300 cm (dan terkena minimum weight 40 kg).`);
-                isLpsOrOmx = true;
-            }
+            // Realized LPS moved to Blue Box
 
             // 2. AHS Warnings (Only if NOT LPS/OMX)
-            // AHS applies if: Weight > 25, Length > 122, Width > 76, or Non-Box
             if (!isLpsOrOmx) {
-                let ahsTriggered = [];
-                if (weight > 25 && weight < 71) ahsTriggered.push(`Berat > 25 kg (${weight} kg)`);
-                if (length > 122) ahsTriggered.push(`Panjang > 122 cm (${length} cm)`);
-                if (width > 76) ahsTriggered.push(`Lebar > 76 cm (${width} cm)`);
-                if (pkgType !== 'box') ahsTriggered.push(`Kemasan Non-Box (${pkgType})`);
+                // Only show "Approaching" if NOT triggered
+                let ahsApproaching = [];
+                if (length >= 115 && length <= 122) ahsApproaching.push(`Panjang ${length} cm (max 122 cm)`);
+                if (width >= 70 && width <= 76) ahsApproaching.push(`Lebar ${width} cm (max 76 cm)`);
+                if (weight >= 21 && weight <= 25) ahsApproaching.push(`Berat ${weight} kg (max 25 kg)`);
 
-                if (ahsTriggered.length > 0) {
-                    packageWarnings.push(`Terkena Additional Handling Surcharge: ${ahsTriggered.join(', ')}.`);
-                } else {
-                    // Only show "Approaching" if NOT triggered
-                    let ahsApproaching = [];
-                    if (length >= 115 && length <= 122) ahsApproaching.push(`Panjang ${length} cm (max 122 cm)`);
-                    if (width >= 70 && width <= 76) ahsApproaching.push(`Lebar ${width} cm (max 76 cm)`);
-                    if (weight >= 21 && weight <= 25) ahsApproaching.push(`Berat ${weight} kg (max 25 kg)`);
-
-                    if (ahsApproaching.length > 0) {
-                        packageWarnings.push(`Mendekati batas Additional Handling Surcharge ${formatCurrency(getCosts().AHS)}: ${ahsApproaching.join(', ')}.`);
-                    }
+                if (ahsApproaching.length > 0) {
+                    packageWarnings.push(`Mendekati batas Additional Handling Surcharge ${formatCurrency(getCosts().AHS)}: ${ahsApproaching.join(', ')}.`);
                 }
             }
 
@@ -1326,6 +1376,10 @@ function lookupRate(trafficType, serviceType, zone, weight) {
 
 // Auto-Update Basic Rate Field
 function autoUpdateBasicRate() {
+    // DEBUG ENTRY POPUP (REMOVED)
+    // const dest = document.getElementById('destinationCountry').value;
+    // alert("AutoUpdate Triggered! Destination: " + dest);
+
     // 1. Get Traffic Type
     const trafficType = document.querySelector('input[name="shipmentType"]:checked').value;
 
@@ -1341,7 +1395,7 @@ function autoUpdateBasicRate() {
     const totalWeightSpan = document.getElementById('res-total-weight');
     const totalWeight = parseFloat(totalWeightSpan.textContent) || 0;
 
-    if (!countryName || totalWeight === 0) return;
+    if (!countryName) return;
 
 
 
@@ -1377,6 +1431,16 @@ function autoUpdateBasicRate() {
         return;
     }
 
+    // V51: Feedback if weight is missing
+    if (totalWeight === 0) {
+        const basicRateInput = document.getElementById('basicRate');
+        if (basicRateInput) {
+            basicRateInput.value = '';
+            basicRateInput.placeholder = 'Enter Weight'; // Hint to user
+        }
+        return;
+    }
+
     // 6. Determine Rate Table Key
     const contentTypeEl = document.getElementById('contentType');
     const isDocument = contentTypeEl && contentTypeEl.value === 'document';
@@ -1396,15 +1460,18 @@ function autoUpdateBasicRate() {
 
     // 7. Lookup Rate
     const rate = lookupRate(trafficType, lookupService, zone, lookupWeight);
-    console.log("AutoUpdate: Rate found =", rate);
+
+    // TEMPORARY DEBUG
+    // alert(`DEBUG: Region=${trafficType}\nService=${lookupService}\nZone=${zone}\nWeight=${lookupWeight}\nRate=${rate}`);
 
     // 8. Update Field if rate found
-    if (rate !== null) {
-        const basicRateInput = document.getElementById('basicRate');
-        if (basicRateInput) {
+    const basicRateInput = document.getElementById('basicRate');
+    if (basicRateInput) {
+        if (rate !== null) {
             basicRateInput.value = rate;
-            // Trigger input event to update calculations if needed
             basicRateInput.dispatchEvent(new Event('input'));
+        } else {
+            basicRateInput.value = '';
         }
     }
 }
@@ -1648,6 +1715,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Check WWEF Limits
+    checkWWEFLimits();
+
     // FSI Logic & Import
     const shipmentDateInput = document.getElementById('shipmentDate');
     const fsiInput = document.getElementById('fsi');
@@ -1767,9 +1837,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (destinationInput) {
         destinationInput.addEventListener('input', () => {
-            updateServiceAvailability();
-            checkWWEFLimits();
-            checkIPFAutoSelect();
+            // Debounce basic rate update slightly to avoid thrashing
+            setTimeout(() => {
+                updateServiceAvailability();
+                checkWWEFLimits();
+                checkIPFAutoSelect();
+            }, 100);
         });
     }
 
@@ -1793,11 +1866,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (originInput) {
         originInput.addEventListener('input', () => {
-            updateServiceAvailability();
-            checkWWEFLimits();
-            updateServiceRecommendation();
-            checkThresholdWarnings(); // Explicitly check warning on input
-            calculate();
+            // Debounce basic rate update slightly
+            setTimeout(() => {
+                updateServiceAvailability();
+                checkWWEFLimits();
+                updateServiceRecommendation();
+                checkThresholdWarnings();
+                calculate();
+            }, 100);
         });
     }
 
@@ -1812,6 +1888,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const destCityInput = document.getElementById('destinationCity');
 
     // --- Autocomplete Helper ---
+    // Debounce Utility to prevent lag on rapid typing
+    function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
+    }
+
+    // Wrapped update function with debounce
+    // We keep the original for immediate calls if needed, but use debounced for events
+    const debouncedUpdateCitySuggestions = debounce(updateCitySuggestions, 300);
+
     function updateCitySuggestions(inputElement, datalistId, countryValue) {
         const datalist = document.getElementById(datalistId);
         if (!datalist) return;
@@ -2093,6 +2183,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function initApp() {
         console.log("DEBUG: initApp executing... (readyState: " + document.readyState + ")");
 
+        // POPULATE COUNTRY DATA LIST DYNAMICALLY
+        populateCountryDatalist();
+
         const originCityInput = document.getElementById('originCity');
         const destCityInput = document.getElementById('destinationCity');
         const originCountryInput = document.getElementById('originCountry');
@@ -2103,7 +2196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove old listener to be safe (not possible with anon func, but okay)
             originCityInput.addEventListener('input', () => {
                 updatePostalSurcharges();
-                updateCitySuggestions(originCityInput, 'originCities', originCountryInput.value);
+                debouncedUpdateCitySuggestions(originCityInput, 'originCities', originCountryInput.value);
             });
         } else {
             console.error("DEBUG: originCityInput NOT FOUND during initApp!");
@@ -2113,7 +2206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("DEBUG: destCityInput found. Attaching listener.");
             destCityInput.addEventListener('input', () => {
                 updatePostalSurcharges();
-                updateCitySuggestions(destCityInput, 'destCities', destCountryInput.value);
+                debouncedUpdateCitySuggestions(destCityInput, 'destCities', destCountryInput.value);
             });
         } else {
             console.error("DEBUG: destCityInput NOT FOUND during initApp!");
@@ -2260,10 +2353,38 @@ document.addEventListener('DOMContentLoaded', () => {
             _calculateInternal();
         } catch (e) {
             const debugDiv = document.getElementById('debug-output');
-            debugDiv.style.display = 'block';
-            debugDiv.textContent = "Error: " + e.message + "\n" + e.stack;
-            alert("An error occurred. Check the bottom of the page for details.");
+            if (debugDiv) {
+                debugDiv.style.display = 'block';
+                debugDiv.textContent = "Error: " + e.message + "\n" + e.stack;
+            }
+            console.error("Calculation Error:", e);
         }
+    }
+    // Expose calculate to global scope for HTML onclick
+    window.calculate = calculate;
+
+    // Helper to populate datalist from keys
+    function populateCountryDatalist() {
+        const datalist = document.getElementById('country-list');
+        if (!datalist) return;
+
+        datalist.innerHTML = ''; // Clear existing
+
+        // Get keys from COUNTRY_SERVICE_ZONES
+        const countries = Object.keys(COUNTRY_ZONES); // Changed to COUNTRY_ZONES as per original context
+
+        // Sort alphabetically
+        countries.sort();
+
+        countries.forEach(country => {
+            // Capitalize for display: "united states" -> "United States"
+            // Simple capitalization of first letters
+            const display = country.replace(/\b\w/g, l => l.toUpperCase());
+            const option = document.createElement('option');
+            option.value = display;
+            datalist.appendChild(option);
+        });
+        console.log(`DEBUG: Populated Country List with ${countries.length} entries.`);
     }
 
     function _calculateInternal() {
@@ -2346,6 +2467,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalChargeableWeight = 0;
         let packageCount = 0;
         let surcharges = []; // { name, cost, type, count }
+        console.log("DEBUG: _calculateInternal Started. Surcharges array init.");
 
         // Comparison Logic Variables
         let potentialSaverSurcharges = 0; // Surcharges that WOULD apply if Saver
@@ -2703,6 +2825,62 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         totalCostEl.textContent = formatCurrency(finalTotal);
+        // --- V43: Dynamic T&C Update ---
+        try {
+            const tcEl = document.getElementById('tc-components');
+            const tcWwefDis = document.getElementById('tc-wwef-disclaimer');
+            const tcDutyDis = document.getElementById('tc-duty-disclaimer');
+            const dutyEnabled = document.getElementById('enable-duty-tax') ? document.getElementById('enable-duty-tax').checked : false;
+
+            if (tcEl) {
+                let includedComponents = ['Basic Rate', 'Fuel Surcharge (FSI)', 'PPN (VAT) 1.1%'];
+
+                // Add Service Name if WWEF specifically
+                if (typeof isWwef !== 'undefined' && isWwef) {
+                    includedComponents.push('Service: WWEF (Freight)');
+                }
+
+                // Add detected surcharges
+                if (Array.isArray(surcharges)) {
+                    surcharges.forEach(s => {
+                        if (s && typeof s.name === 'string') {
+                            // Simplified name extraction
+                            let name = s.name.split('(')[0].trim();
+                            if (name.includes("Pkg #") && name.includes(":")) {
+                                const parts = name.split(':');
+                                if (parts.length > 1) name = parts[1].trim();
+                            }
+
+                            if (!includedComponents.some(c => c.includes(name))) {
+                                includedComponents.push(name);
+                            }
+                        }
+                    });
+                }
+                tcEl.innerHTML = `<strong>Komponen Biaya:</strong> Estimasi harga di atas <strong>SUDAH TERMASUK</strong> ${includedComponents.join(', ')}.`;
+            }
+
+            // Dynamic WWEF Disclaimer (Hide if already WWEF)
+            if (tcWwefDis) {
+                if (typeof isWwef !== 'undefined' && isWwef) {
+                    tcWwefDis.style.display = 'none'; // Hide disclaimer if already Freight
+                } else {
+                    tcWwefDis.style.display = 'list-item'; // Show standard disclaimer
+                }
+            }
+
+            // --- V44: Dynamic Duty Disclaimer ---
+            if (tcDutyDis) {
+                if (dutyEnabled) {
+                    tcDutyDis.innerHTML = `<strong>Info Bea Masuk:</strong> Estimasi Duty & Tax yang ditampilkan adalah <strong>INDIKASI AWAL</strong> berdasarkan HS Code & Kurs saat ini. Nilai final ditentukan oleh Pejabat Bea Cukai saat barang tiba (Official Assessment).`;
+                } else {
+                    tcDutyDis.innerHTML = `<strong>Pengecualian:</strong> Harga <strong>BELUM TERMASUK</strong> Bea Masuk (Duty) & Pajak Impor (Tax) negara tujuan, biaya penyimpanan gudang (storage), atau biaya tak terduga lainnya akibat pemeriksaan pabean.`;
+                }
+            }
+
+        } catch (e) {
+            console.error("Error updating T&C:", e);
+        }
 
         // Comparison Logic (Option B)
         let freightForTax = finalTotal;
@@ -2784,6 +2962,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hide by default
         transitDiv.style.display = 'none';
 
+
+
+        if (!TRANSIT_MODEL) return;
+
         // Get Inputs
         const trafficType = document.querySelector('input[name="shipmentType"]:checked').value; // 'export' or 'import'
         const serviceVal = document.getElementById('serviceType').value; // 'saver', 'expedited', 'wwef'
@@ -2791,6 +2973,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Determine Country
         const destinationInput = document.getElementById('destinationCountry');
+
         const originInput = document.getElementById('originCountry');
         let countryName = (trafficType === 'export' ? destinationInput : originInput).value.trim();
 
@@ -3156,10 +3339,11 @@ document.addEventListener('DOMContentLoaded', () => {
             activeTier = 'mfn-exception';
         } else if (totalFobUSD <= 3) {
             activeTier = 'deminimis';
-        } else if (totalFobUSD <= 1500) {
+            // User Request Update: If CIF > 1500 USD, force MFN (PPh applies) even if FOB is small.
+        } else if (totalFobUSD <= 1500 && totalCifUSD <= 1500) {
             activeTier = 'flat';
         } else {
-            activeTier = 'mfn';
+            activeTier = 'mfn'; // CIF > 1500 or FOB > 1500 -> PIBE (MFN + PPh)
         }
 
         // 2. Apply Calculation based on Tier
@@ -3347,6 +3531,76 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // --- V45: Official Quote Print Logic ---
+    const updatePrintView = () => {
+        // 1. Date
+        const dateSpan = document.getElementById('print-date');
+        if (dateSpan) {
+            const now = new Date();
+            dateSpan.textContent = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // 2. Customer Name
+        const custInput = document.getElementById('input-customer-name');
+        const custPrint = document.getElementById('print-customer');
+        if (custInput && custPrint) {
+            custPrint.textContent = custInput.value || "____________";
+        }
+
+        // 3. Shipment Details (Origin/Dest with City/Zip)
+        try {
+            const getVal = (id) => (document.getElementById(id) ? document.getElementById(id).value.toUpperCase().trim() : '');
+
+            const originCountry = getVal('originCountry');
+            const originCity = getVal('originCity');
+            const originZip = getVal('originPostCode');
+            let originFull = originCountry;
+            if (originCity) originFull += ` - ${originCity}`;
+            if (originZip) originFull += `, ${originZip}`;
+
+            const destCountry = getVal('destinationCountry');
+            const destCity = getVal('destinationCity');
+            const destZip = getVal('destinationPostCode');
+            let destFull = destCountry;
+            if (destCity) destFull += ` - ${destCity}`;
+            if (destZip) destFull += `, ${destZip}`;
+
+            const serviceVal = getVal('serviceType');
+            const weightVal = document.getElementById('res-total-weight').textContent;
+
+            document.getElementById('print-origin').textContent = originFull;
+            document.getElementById('print-dest').textContent = destFull;
+            const fullService = (typeof isWwef !== 'undefined' && isWwef) ? `ups ${serviceVal} (WWEF)` : `ups ${serviceVal}`;
+            document.getElementById('print-service').textContent = fullService.toUpperCase();
+            document.getElementById('print-weight').textContent = weightVal;
+
+        } catch (e) { console.error("Print details error", e); }
+
+        // 4. Hide Empty Rows (Package Table)
+        const pkgRows = document.querySelectorAll('#package-rows tr');
+        pkgRows.forEach((row, index) => {
+            // Always keep first row
+            if (index === 0) return;
+
+            // Check if empty
+            const weight = row.querySelector('.pkg-weight').value;
+            const length = row.querySelector('.pkg-length').value;
+            if ((!weight || weight == 0) && (!length || length == 0)) {
+                row.classList.add('print-hidden-row');
+            } else {
+                row.classList.remove('print-hidden-row');
+            }
+        });
+    };
+
+    window.addEventListener('beforeprint', updatePrintView);
+
+    // Restore rows after print (though class-based print media query handles it best, 
+    // cleanup is good practice if we used inline styles. Here we use class 'print-hidden-row')
+    window.addEventListener('afterprint', () => {
+        document.querySelectorAll('.print-hidden-row').forEach(row => row.classList.remove('print-hidden-row'));
+    });
+
     // --- NEW: Multi-Row Listener Setup ---
     function setupRowListeners() {
         const rows = document.querySelectorAll('#duty-rows tr');
@@ -3418,6 +3672,25 @@ document.addEventListener('DOMContentLoaded', () => {
             rateInput.addEventListener('input', () => calculateDutyTax(getFreight()));
             valueInput.addEventListener('input', () => calculateDutyTax(getFreight()));
             currencySelect.addEventListener('change', () => calculateDutyTax(getFreight()));
+
+            // --- V46: Duty Checkbox Listener for Immediate T&C Update ---
+            const dutyCheckbox = document.getElementById('enable-duty-tax');
+            if (dutyCheckbox) {
+                dutyCheckbox.addEventListener('change', () => {
+                    const tcDutyDis = document.getElementById('tc-duty-disclaimer');
+                    if (tcDutyDis) {
+                        if (dutyCheckbox.checked) {
+                            tcDutyDis.innerHTML = `<strong>Info Bea Masuk:</strong> Estimasi Duty & Tax yang ditampilkan adalah <strong>INDIKASI AWAL</strong> berdasarkan HS Code & Kurs saat ini. Nilai final ditentukan oleh Pejabat Bea Cukai saat barang tiba (Official Assessment).`;
+                        } else {
+                            tcDutyDis.innerHTML = `<strong>Pengecualian:</strong> Harga <strong>BELUM TERMASUK</strong> Bea Masuk (Duty) & Pajak Impor (Tax) negara tujuan, biaya penyimpanan gudang (storage), atau biaya tak terduga lainnya akibat pemeriksaan pabean.`;
+                        }
+                    }
+                    // Also trigger main recalc if needed, but text update is primary goal here
+                    if (resultsDiv.style.display !== 'none') {
+                        calculateDutyTax(getFreight());
+                    }
+                });
+            }
         });
     }
 
@@ -3459,3 +3732,298 @@ document.addEventListener('DOMContentLoaded', () => {
 
 }); // Closes DOMContentLoaded
 
+
+// --- V47: Dynamic Package Rows Logic ---
+window.setupPackageRowListeners = function (row) {
+    const lengthInput = row.querySelector('.pkg-length');
+    const widthInput = row.querySelector('.pkg-width');
+    const heightInput = row.querySelector('.pkg-height');
+    const weightInput = row.querySelector('.pkg-weight');
+    const girthInput = row.querySelector('.pkg-girth');
+    const cWeightInput = row.querySelector('.pkg-cweight');
+    const qtyInput = row.querySelector('.pkg-qty');
+
+    // console.log("DEBUG: setupPackageRowListeners attached to row", row);
+
+    const updateRowCalculations = () => {
+        // Helper for safe parsing
+        const safeFloat = (val) => {
+            if (typeof val === 'string') return parseFloat(val.replace(',', '.')) || 0;
+            return parseFloat(val) || 0;
+        };
+
+        let l = safeFloat(lengthInput.value);
+        let w = safeFloat(widthInput.value);
+        let h = safeFloat(heightInput.value);
+        const weight = safeFloat(weightInput.value);
+
+        // V34: Dimension Rounding Rule (Effective Jan 11, 2026)
+        let shouldRound = false;
+        const dateInput = document.getElementById('shipmentDate');
+        if (dateInput && dateInput.value) {
+            const selectedDate = new Date(dateInput.value);
+            const roundingCutoff = new Date('2026-01-11');
+            if (selectedDate >= roundingCutoff) {
+                shouldRound = true;
+                l = Math.ceil(l);
+                w = Math.ceil(w);
+                h = Math.ceil(h);
+            }
+        }
+
+        // Girth
+        const girth = (2 * w) + (2 * h);
+        girthInput.value = girth > 0 ? girth : '';
+
+        // Chargeable Weight (Volumetric vs Actual)
+        const volWeight = (l * w * h) / 5000;
+        let cWeight = Math.max(weight, volWeight);
+
+        // V35: Weight Rounding Rule
+        if (shouldRound && cWeight > 0) {
+            cWeight = Math.ceil(cWeight * 2) / 2;
+        }
+
+        cWeightInput.value = cWeight > 0 ? cWeight.toFixed(2) : '';
+
+        // Trigger Global Updates
+        if (typeof updateTotalWeightAndMode === 'function') updateTotalWeightAndMode();
+        if (typeof updateServiceRecommendation === 'function') updateServiceRecommendation();
+        if (typeof checkWWEFLimits === 'function') checkWWEFLimits();
+        if (typeof checkThresholdWarnings === 'function') checkThresholdWarnings();
+
+        // Also trigger generic calculateResults if available
+        if (typeof calculateResults === 'function') calculateResults();
+    };
+
+    const inputs = [lengthInput, widthInput, heightInput, weightInput, qtyInput];
+    inputs.forEach(input => {
+        if (input) {
+            input.addEventListener('input', updateRowCalculations);
+            input.addEventListener('change', updateRowCalculations);
+        }
+    });
+};
+
+window.addPackageRow = function () {
+    const tbody = document.getElementById('package-rows');
+    const firstRow = tbody.querySelector('tr'); // Use first row as template
+    const newRow = firstRow.cloneNode(true);
+
+    // console.log("DEBUG: Adding new row...");
+
+    // Clear inputs
+    newRow.querySelectorAll('input').forEach(input => {
+        if (input.classList.contains('pkg-qty')) input.value = 1;
+        else input.value = '';
+    });
+
+    // Reset Select
+    const select = newRow.querySelector('select');
+    if (select) select.selectedIndex = 0;
+
+    // Reset Readonly fields
+    newRow.querySelectorAll('[readonly]').forEach(input => input.value = '');
+
+    tbody.appendChild(newRow);
+    setupPackageRowListeners(newRow);
+};
+
+window.removePackageRow = function (btn) {
+    const tbody = document.getElementById('package-rows');
+    const row = btn.closest('tr');
+
+    if (tbody.querySelectorAll('tr').length > 1) {
+        row.remove();
+    } else {
+        // If last row, just clear it
+        row.querySelectorAll('input').forEach(input => {
+            if (input.classList.contains('pkg-qty')) input.value = 1;
+            else input.value = '';
+        });
+        alert("Minimal 1 baris harus ada.");
+    }
+    if (typeof calculateResults === 'function') calculateResults();
+};
+
+// Initial Listener Re-bind (Call this safely)
+document.addEventListener('DOMContentLoaded', () => {
+    const rows = document.querySelectorAll('#package-rows tr');
+    rows.forEach(row => {
+        if (window.setupPackageRowListeners) window.setupPackageRowListeners(row);
+    });
+
+    // --- V49: RESTORED Country & Shipment Type Listeners ---
+    // These were missing, causing "Error" (or lack of response) when inputting country.
+    const originCountryInput = document.getElementById('originCountry');
+    const destCountryInput = document.getElementById('destinationCountry');
+    const originZipInput = document.getElementById('originPostCode');
+    const destZipInput = document.getElementById('destinationPostCode');
+    const shipmentTypeInputs = document.querySelectorAll('input[name="shipmentType"]');
+
+    if (originCountryInput) originCountryInput.addEventListener('input', updateServiceAvailability);
+    if (destCountryInput) destCountryInput.addEventListener('input', updateServiceAvailability);
+
+    // Zip codes for China limit check
+    if (originZipInput) originZipInput.addEventListener('input', updateServiceAvailability);
+    if (destZipInput) destZipInput.addEventListener('input', updateServiceAvailability);
+
+    shipmentTypeInputs.forEach(radio => {
+        radio.addEventListener('change', () => {
+            updateServiceAvailability();
+            // Also toggle origin/dest inputs visibility if needed (logic exists elsewhere usually)
+            // But simpler to just run availability check
+        });
+    });
+
+    // V50: Auto-Populate Indonesia Logic (Moved to correct init block)
+    const radioExport = document.getElementById('type-export');
+    const radioImport = document.getElementById('type-import');
+    const inputOrigin = document.getElementById('originCountry');
+    const inputDest = document.getElementById('destinationCountry');
+
+    function updateDefaultCountries() {
+        if (radioExport.checked) {
+            inputOrigin.value = 'Indonesia';
+            inputDest.value = '';
+            inputDest.placeholder = 'Country Name';
+        } else {
+            inputDest.value = 'Indonesia';
+            inputOrigin.value = '';
+            inputOrigin.placeholder = 'Country Name';
+        }
+        updateServiceAvailability();
+    }
+
+    if (radioExport && radioImport) {
+        radioExport.addEventListener('change', updateDefaultCountries);
+        radioImport.addEventListener('change', updateDefaultCountries);
+    }
+
+    // Initial call
+    updateDefaultCountries();
+
+    // Initial check
+    updateServiceAvailability();
+});
+
+/**
+ * --- V48: RESTORED LOGIC FUNCTIONS ---
+ * These functions handle city suggestions, postal surcharges, 
+ * and zip-code based country detection.
+ */
+
+window.updateCitySuggestions = function (input, listId, country) {
+    if (!country || !input.value || input.value.length < 2 || typeof EAS_RAS_DATA === 'undefined') return;
+    const datalist = document.getElementById(listId);
+    if (!datalist) return;
+
+    const normalizedCountry = country.toLowerCase().trim();
+    const mapping = {
+        "taiwan, china": "taiwan",
+        "hong kong, china": "hong kong",
+        "macau, china": "macau"
+    };
+    const searchCountry = mapping[normalizedCountry] || normalizedCountry;
+
+    const countryKey = Object.keys(EAS_RAS_DATA).find(k => k.toLowerCase() === searchCountry);
+    if (!countryKey) return;
+
+    const cityData = EAS_RAS_DATA[countryKey];
+    const suggestions = new Set();
+    const query = input.value.toLowerCase().trim();
+
+    cityData.forEach(item => {
+        if (item.city && item.city.toLowerCase().includes(query)) {
+            suggestions.add(item.city);
+        }
+    });
+
+    datalist.innerHTML = '';
+    Array.from(suggestions).sort().slice(0, 15).forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        datalist.appendChild(option);
+    });
+};
+
+window.autoDetectCountryFromPostCode = function (isDest) {
+    // Heuristic zip detection.
+};
+
+window.updatePostalSurcharges = function () {
+    const trafficType = document.querySelector('input[name="shipmentType"]:checked').value;
+    const originCountry = document.getElementById('originCountry').value.trim().toLowerCase();
+    const originZip = document.getElementById('originPostCode').value.trim();
+    const originCity = document.getElementById('originCity').value.trim();
+
+    const destCountry = document.getElementById('destinationCountry').value.trim().toLowerCase();
+    const destZip = document.getElementById('destinationPostCode').value.trim();
+    const destCity = document.getElementById('destinationCity').value.trim();
+
+    const eaCheck = document.getElementById('check-ea');
+    const raCheck = document.getElementById('check-ra');
+
+    if (!eaCheck || !raCheck) return;
+
+    let isEA = false;
+    let isRA = false;
+
+    if (trafficType === 'import') {
+        const result = checkPostalService(originCountry, originZip, originCity, 'origin');
+        if (result === 'EAS') isEA = true;
+        if (result === 'RAS') isRA = true;
+    } else {
+        const result = checkPostalService(destCountry, destZip, destCity, 'dest');
+        if (result === 'EAS') isEA = true;
+        if (result === 'RAS') isRA = true;
+    }
+
+    if (eaCheck.checked !== isEA) {
+        eaCheck.checked = isEA;
+        eaCheck.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (raCheck.checked !== isRA) {
+        raCheck.checked = isRA;
+        raCheck.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+};
+
+function checkPostalService(country, zip, city, type) {
+    if (!country || typeof EAS_RAS_DATA === 'undefined') return null;
+    const normalizedCountry = country.toLowerCase().trim();
+    const mapping = {
+        "taiwan, china": "taiwan",
+        "hong kong, china": "hong kong",
+        "macau, china": "macau"
+    };
+    const searchCountry = mapping[normalizedCountry] || normalizedCountry;
+
+    const countryKey = Object.keys(EAS_RAS_DATA).find(k => k.toLowerCase() === searchCountry);
+    if (!countryKey) return null;
+
+    const data = EAS_RAS_DATA[countryKey];
+    const zipClean = zip.replace(/\D/g, '');
+    const zipNum = parseInt(zipClean) || 0;
+    const normalizedCity = city.toLowerCase().trim();
+
+    for (const item of data) {
+        let zipMatch = false;
+        if (item.low === 0 && item.high === 999999) {
+            zipMatch = true;
+        } else if (zipClean.length > 0) {
+            zipMatch = (zipNum >= item.low && zipNum <= item.high);
+        }
+
+        const cityMatch = item.city ? (normalizedCity === item.city.toLowerCase().trim()) : true;
+
+        if (zipMatch && cityMatch) {
+            const foundType = type === 'origin' ? item.originType : item.destType;
+            if (foundType) return foundType;
+        }
+    }
+    return null;
+}
+
+// End of Script
+console.log("Script Loaded Successfully");
