@@ -780,7 +780,7 @@ function updateServiceRecommendation() {
             if (weight > 25 && weight < 71) ahsReasons.push(`Berat > 25 kg`);
             if (length > 122) ahsReasons.push(`Panjang > 122 cm`);
             if (width > 76) ahsReasons.push(`Lebar > 76 cm`);
-            if (pkgType !== 'box') ahsReasons.push(`Kemasan Non-Box`);
+            if (pkgType !== 'box' && pkgType !== 'envelope') ahsReasons.push(`Kemasan Non-Box`);
 
             if (ahsReasons.length > 0 && lengthPlusGirth < 380) { // <380 to ensure not WWEF territory yet? No, just show it.
                 warnings.push(`Terkena AHS: ${ahsReasons.join(', ')}`);
@@ -2302,6 +2302,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const expeditedOption = serviceTypeSelect.querySelector('option[value="expedited"]');
             const wwefOption = serviceTypeSelect.querySelector('option[value="wwef"]');
 
+            // Update Package Rows
+            const pkgTypeSelects = document.querySelectorAll('.pkg-type');
+            pkgTypeSelects.forEach(select => {
+                if (isEnvelope) {
+                    select.value = 'envelope';
+                    select.disabled = true;
+                } else {
+                    select.disabled = false;
+                    // Optional: Reset to box if it was envelope? 
+                    // No, let user decide. Just unblock.
+                }
+            });
+
             if (isEnvelope) {
                 if (wwefOption) wwefOption.disabled = true;
                 if (expeditedOption) expeditedOption.disabled = true;
@@ -2569,7 +2582,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // AHS applies if NOT OMX/LPS
                 let ahsReasons = [];
                 if (weight > 25 && weight < 71) ahsReasons.push('Weight');
-                if (packageType !== 'box') ahsReasons.push('Packaging');
+                if (packageType !== 'box' && packageType !== 'envelope') ahsReasons.push('Packaging');
                 if ((length > 122 || width > 76) && totalDim <= 300) ahsReasons.push('Dimensions');
 
                 if (ahsReasons.length > 0) {
@@ -2594,7 +2607,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Re-determine reasons for display
                     let ahsReasons = [];
                     if (weight > 25 && weight < 71) ahsReasons.push('Weight');
-                    if (packageType !== 'box') ahsReasons.push('Packaging');
+                    if (packageType !== 'box' && packageType !== 'envelope') ahsReasons.push('Packaging');
                     if ((length > 122 || width > 76) && totalDim <= 300) ahsReasons.push('Dimensions');
                     surcharges.push({ name: `Pkg #${index + 1} (x${qty}): AHS (${ahsReasons.join(', ')})`, cost: getCosts().AHS * qty, count: qty });
                 }
@@ -3820,7 +3833,17 @@ window.addPackageRow = function () {
 
     // Reset Select
     const select = newRow.querySelector('select');
-    if (select) select.selectedIndex = 0;
+    if (select) {
+        select.selectedIndex = 0;
+        // Check Content Type
+        const contentType = document.getElementById('contentType').value;
+        if (contentType === 'document') {
+            select.value = 'envelope';
+            select.disabled = true;
+        } else {
+            select.disabled = false;
+        }
+    }
 
     // Reset Readonly fields
     newRow.querySelectorAll('[readonly]').forEach(input => input.value = '');
