@@ -3352,11 +3352,11 @@ document.addEventListener('DOMContentLoaded', () => {
             activeTier = 'mfn-exception';
         } else if (totalFobUSD <= 3) {
             activeTier = 'deminimis';
-            // User Request Update: If CIF > 1500 USD, force MFN (PPh applies) even if FOB is small.
-        } else if (totalFobUSD <= 1500 && totalCifUSD <= 1500) {
+            // User Request Update: Threshold USD 1500 is based on FOB only. CIF does not trigger MFN.
+        } else if (totalFobUSD <= 1500) {
             activeTier = 'flat';
         } else {
-            activeTier = 'mfn'; // CIF > 1500 or FOB > 1500 -> PIBE (MFN + PPh)
+            activeTier = 'mfn'; // FOB > 1500 -> PIBE (MFN + PPh)
         }
 
         // 2. Apply Calculation based on Tier
@@ -3508,9 +3508,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update Header/Info to show tier
         const taxTitle = document.querySelector('#duty-tax-result h4');
         if (taxTitle) {
-            let tierText = "MFN (CIF > $1500)";
+            let tierText = "MFN (FOB > $1500)";
             if (activeTier === 'deminimis') tierText = "De Minimis (FOB <= $3)";
-            else if (activeTier === 'flat') tierText = "Flat Rate (CIF <= $1500)";
+            else if (activeTier === 'flat') tierText = "Flat Rate (FOB <= $1500)";
             else if (activeTier === 'mfn-exception') tierText = "MFN (Exception Goods/Lartas)";
             taxTitle.textContent = `Estimasi Duty & Tax (${tierText})`;
         }
