@@ -1,15 +1,26 @@
 // Cost Configuration - Versioned
+const SURGE_REGIONS = {
+    AMERICAS: ["anguilla", "antigua and barbuda", "argentina", "aruba", "bahamas", "barbados", "belize", "bermuda", "bolivia", "bonaire", "st. eustatius", "saba", "brazil", "british virgin islands", "canada", "cayman islands", "chile", "colombia", "costa rica", "curacao", "dominica", "dominican republic", "ecuador", "el salvador", "french guiana", "grenada", "guadeloupe", "guatemala", "guyana", "haiti", "honduras", "jamaica", "martinique", "mexico", "montserrat", "nicaragua", "panama", "paraguay", "peru", "puerto rico", "st. barthelemy", "st. christopher", "st. kitts", "st. lucia", "st. martin", "st. maarten", "st. vincent and the grenadines", "suriname", "trinidad and tobago", "turks and caicos islands", "u.s. virgin islands", "uruguay", "venezuela", "united states", "usa", "us"],
+    EUROPE: ["albania", "andorra", "armenia", "austria", "belarus", "belgium", "bosnia and herzegovina", "bulgaria", "croatia", "cyprus", "czech republic", "denmark", "estonia", "finland", "france", "georgia", "germany", "gibraltar", "greece", "guernsey", "hungary", "iceland", "ireland", "italy", "jersey", "channel islands", "kosovo", "latvia", "lithuania", "luxembourg", "malta", "moldova", "montenegro", "netherlands", "north macedonia", "norway", "poland", "portugal", "romania", "russia", "san marino", "serbia", "slovakia", "slovenia", "spain", "sweden", "switzerland", "turkey", "ukraine", "united kingdom", "uk"],
+    ISMEA: ["afghanistan", "algeria", "angola", "azerbaijan", "bahrain", "bangladesh", "benin", "botswana", "burkina faso", "burundi", "cameroon", "cape verde", "chad", "comoros", "cote d'ivoire", "ivory coast", "democratic republic of the congo", "djibouti", "egypt", "eritrea", "ethiopia", "gabon", "gambia", "ghana", "guinea", "guinea-bissau", "iraq", "jordan", "kazakhstan", "kenya", "kuwait", "kyrgyzstan", "lebanon", "lesotho", "liberia", "madagascar", "malawi", "maldives", "mali", "mauritania", "mauritius", "mayotte", "morocco", "mozambique", "namibia", "nepal", "niger", "nigeria", "oman", "pakistan", "qatar", "republic of congo", "reunion", "rwanda", "saudi arabia", "senegal", "seychelles", "sierra leone", "south africa", "sri lanka", "swaziland", "tanzania", "togo", "tunisia", "turkmenistan", "united arab emirates", "uae", "uganda", "uzbekistan", "zambia", "zimbabwe"],
+    ASIA_PACIFIC: ["american samoa", "brunei", "cambodia", "china", "china mainland", "guam", "hong kong", "hong kong sar", "india", "indonesia", "japan", "laos", "macau", "macau sar", "malaysia", "mongolia", "myanmar", "new caledonia", "northern mariana islands", "philippines", "samoa", "singapore", "south korea", "taiwan", "thailand", "vietnam"],
+    AUS_NZ: ["australia", "new zealand"]
+};
+
+// Cost Configuration - Versioned
 const COSTS_DEFAULT = {
     AHS: 243460,
     LPS: 1058200,
     OMX: 4121800,
     BROKERAGE_IMPORT: 118647, // Updated to user specific value
     SURGE: {
-        TO_EUR: 16280,
-        FROM_EUR: 7252,
-        FROM_AMERICAS: 6512,
-        TO_AMERICAS_ISMEA: 16280,
-        ASIA: 1480,
+        FROM_EUR: 7252, // Import Rate Preserved
+        FROM_AMERICAS: 6512, // Import Rate Preserved
+        AMERICAS: 16280,
+        EUROPE: 16280,
+        ISMEA: 16280,
+        AUS_NZ: 1480,
+        ASIA_PACIFIC: 1480,
         ISRAEL: 9620
     },
     OPTIONAL: {
@@ -34,7 +45,16 @@ const COSTS_2025 = {
     LPS: 1058200, // No change mentioned, keep default? User only listed specific changes. Assuming unchanged items stay same.
     OMX: 4121800, // Assumption: Unchanged
     BROKERAGE_IMPORT: 118647, // Updated to user specific value
-    SURGE: { ...COSTS_DEFAULT.SURGE }, // Assumption: Unchanged
+    SURGE: {
+        FROM_EUR: 7252,
+        FROM_AMERICAS: 6512,
+        AMERICAS: 16280,
+        EUROPE: 16280,
+        ISMEA: 16280,
+        AUS_NZ: 1480,
+        ASIA_PACIFIC: 1480,
+        ISRAEL: 9620
+    },
     OPTIONAL: {
         EXTENDED_AREA_MIN: 429792,
         EXTENDED_AREA_KG: 8288,
@@ -2700,12 +2720,27 @@ document.addEventListener('DOMContentLoaded', () => {
         // Surge Fee
         let surgeRate = 0;
         const costs = getCosts();
-        if (destination === 'eur') surgeRate = costs.SURGE.TO_EUR;
-        else if (origin === 'eur') surgeRate = costs.SURGE.FROM_EUR;
-        else if (origin === 'americas') surgeRate = costs.SURGE.FROM_AMERICAS;
-        else if (destination === 'americas' || destination === 'ismea') surgeRate = costs.SURGE.TO_AMERICAS_ISMEA;
-        else if (origin === 'israel' || destination === 'israel') surgeRate = costs.SURGE.ISRAEL;
-        else if (origin === 'asia' || destination === 'asia') surgeRate = costs.SURGE.ASIA;
+        const originLower = originCountry.toLowerCase().trim() || origin.toLowerCase();
+        const destLower = destinationCountry.toLocaleString().toLowerCase().trim() || destination.toLowerCase();
+
+        // Check Export Logic based on detailed Country Lists (SURGE_REGIONS)
+        if (shipmentType === 'export') {
+            // Priority: Israel > Americas > Europe > ISMEA > Aus/NZ > Asia Pacific
+            if (destLower === 'israel') surgeRate = costs.SURGE.ISRAEL;
+            else if (SURGE_REGIONS.AMERICAS.includes(destLower)) surgeRate = costs.SURGE.AMERICAS;
+            else if (SURGE_REGIONS.EUROPE.includes(destLower)) surgeRate = costs.SURGE.EUROPE;
+            else if (SURGE_REGIONS.ISMEA.includes(destLower)) surgeRate = costs.SURGE.ISMEA;
+            else if (SURGE_REGIONS.AUS_NZ.includes(destLower)) surgeRate = costs.SURGE.AUS_NZ;
+            else if (SURGE_REGIONS.ASIA_PACIFIC.includes(destLower)) surgeRate = costs.SURGE.ASIA_PACIFIC;
+        } else {
+            // Import Logic (Preserved as is roughly, but using general keys if needed or fallback)
+            // Existing logic relied on 'eur', 'americas' shorthand from dropdowns.
+            if (destination === 'eur') surgeRate = costs.SURGE.TO_EUR || 16280;
+            else if (origin === 'eur') surgeRate = costs.SURGE.FROM_EUR;
+            else if (origin === 'americas') surgeRate = costs.SURGE.FROM_AMERICAS;
+            else if (origin === 'israel' || destination === 'israel') surgeRate = costs.SURGE.ISRAEL;
+            else if (origin === 'asia' || destination === 'asia') surgeRate = costs.SURGE.ASIA_PACIFIC;
+        }
 
         let surgeTotal = 0;
         if (surgeRate > 0 && totalChargeableWeight > 0) {
