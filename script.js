@@ -90,26 +90,14 @@ function getCosts() {
 }
 
 const CHINA_SOUTHERN_RANGES = [
-    { start: 350000, end: 369999 }, // Fujian
-    { start: 510000, end: 529999 }, // Guangdong
-    { start: 571600, end: 571800 }, // Hainan
-    { start: 410600, end: 421527 }, // Hunan
-    { start: 674100, end: 678400 }, // Yunnan
-    { start: 332325, end: 343000 }, // Jiangxi (Approx based on user input 343000 - 332325)
-    { start: 400010, end: 400032 }, // Chongqing
-    // Guangxi
-    { start: 541000, end: 542400 },
-    { start: 530000, end: 532700 },
-    { start: 545000, end: 545600 },
-    { start: 543000, end: 546700 },
-    { start: 536000, end: 536100 },
-    { start: 535000, end: 535400 },
-    { start: 537100, end: 537300 },
-    { start: 537000, end: 537800 },
-    { start: 533000, end: 533900 },
-    { start: 542800, end: 546800 },
-    { start: 547000, end: 547600 },
-    { start: 546100, end: 546500 }
+    { start: 350000, end: 369999 }, // Fujian (Prefix 35, 36)
+    { start: 510000, end: 529999 }, // Guangdong (Prefix 51, 52)
+    { start: 570000, end: 579999 }, // Hainan (Prefix 57) - Fixes 572025
+    { start: 410000, end: 429999 }, // Hunan (Prefix 41, 42)
+    { start: 650000, end: 679999 }, // Yunnan (Prefix 65, 66, 67)
+    { start: 330000, end: 349999 }, // Jiangxi (Prefix 33, 34)
+    { start: 400000, end: 409999 }, // Chongqing (Prefix 40)
+    { start: 530000, end: 549999 }  // Guangxi (Prefix 53, 54)
 ];
 
 // Major Chinese City Mapping (Prefix -> City Name)
