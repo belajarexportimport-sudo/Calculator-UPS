@@ -1964,89 +1964,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const originCity = document.getElementById('originCity') ? document.getElementById('originCity').value : '';
         const destCity = document.getElementById('destinationCity') ? document.getElementById('destinationCity').value : '';
 
-        console.log(`DEBUG: updatePostalSurcharges Triggered. OrgCity='${originCity}', DestCity='${destCity}'`);
+        // console.log(`DEBUG: updatePostalSurcharges Triggered. OrgCity='${originCity}', DestCity='${destCity}'`);
 
-        // Check Surcharge (Helper from eas_ras_data.js)
-
-
-        // Check Surcharge (Local Logic)
+        // Check Surcharge using ZipScreeningLib
         let originType = null;
         let destType = null;
 
-        function lookupSurcharge(country, zip, cityName, context) {
-            try {
-                if (!country) return null;
-
-                // --- 1. RANGE LOOKUP (Postal Code) ---
-                if (typeof EAS_RAS_DATA !== 'undefined' && EAS_RAS_DATA) {
-                    let ranges = EAS_RAS_DATA[country]; // Try exact
-                    if (!ranges) ranges = EAS_RAS_DATA[country.trim()];
-                    if (!ranges && country.toLowerCase) ranges = EAS_RAS_DATA[country.toLowerCase().trim()];
-
-                    // Fallback to case-insensitive key search
-                    if (!ranges) {
-                        const lowerInput = country.toLowerCase().trim();
-                        const matchedKey = Object.keys(EAS_RAS_DATA).find(k => k.toLowerCase().trim() === lowerInput);
-                        if (matchedKey) ranges = EAS_RAS_DATA[matchedKey];
-                    }
-
-                    if (ranges && Array.isArray(ranges) && zip) {
-                        const zipNum = parseInt(zip.replace(/[^0-9]/g, ''));
-                        if (!isNaN(zipNum)) {
-                            for (const range of ranges) {
-                                if (zipNum >= range.low && zipNum <= range.high) {
-                                    // Prefer range match if found
-                                    if (context === 'origin' && range.originType) return range.originType;
-                                    if (context === 'destination' && range.destType) return range.destType;
-                                }
-                            }
-                        }
-                    }
-                } // End Range Lookup
-
-                // --- 2. CITY LOOKUP (Fallback) ---
-                if (typeof EAS_RAS_CITIES !== 'undefined' && EAS_RAS_CITIES && cityName && cityName.trim().length > 1) {
-                    let cityList = EAS_RAS_CITIES[country];
-                    if (!cityList) cityList = EAS_RAS_CITIES[country.trim()];
-                    if (!cityList && country.toLowerCase) cityList = EAS_RAS_CITIES[country.toLowerCase().trim()];
-
-                    // Case-insensitive key search for country
-                    if (!cityList) {
-                        const lowerInput = country.toLowerCase().trim();
-                        const matchedKey = Object.keys(EAS_RAS_CITIES).find(k => k.toLowerCase().trim() === lowerInput);
-                        if (matchedKey) cityList = EAS_RAS_CITIES[matchedKey];
-                    }
-
-                    if (cityList && Array.isArray(cityList)) {
-                        const searchCity = cityName.toLowerCase().trim();
-                        // Find matching city
-                        const matchedCity = cityList.find(c => c.name.toLowerCase().trim() === searchCity);
-
-                        if (matchedCity) {
-                            if (context === 'origin' && matchedCity.originType) return matchedCity.originType;
-                            if (context === 'destination' && matchedCity.destType) return matchedCity.destType;
-                        }
-                    }
-                }
-
-            } catch (err) {
-                console.warn("Postal/City Surcharge Lookup Error:", err);
-                return null;
-            }
-            return null;
+        if (typeof ZipScreeningLib !== 'undefined') {
+            originType = ZipScreeningLib.getSurcharge(originCountry, originZip, originCity, 'origin');
+            destType = ZipScreeningLib.getSurcharge(destCountry, destZip, destCity, 'destination');
+        } else {
+            console.error("ZipScreeningLib not loaded!");
+            // Fallback (safe to ignore or keep null to avoid breaking UI)
+            return;
         }
-
-        originType = lookupSurcharge(originCountry, originZip, originCity, 'origin');
-        destType = lookupSurcharge(destCountry, destZip, destCity, 'destination'); // Fixed function signature
 
         console.log(`DEBUG: Surcharge Result -> OriginType=${originType}, DestType=${destType}`);
 
-
         const easCheckbox = document.querySelector('#dropdown-options input[value="extendedArea"]');
         const rasCheckbox = document.querySelector('#dropdown-options input[value="remoteArea"]');
-
-        // Reset check (UI logic remains same, just data source became smarter)
-        // ... (existing helper logic)
 
         let easCount = 0;
         if (originType === 'EAS') easCount++;
