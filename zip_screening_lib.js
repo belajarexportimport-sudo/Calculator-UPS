@@ -26,6 +26,7 @@ window.ZipScreeningLib = (function () {
 
         // 2. Remove non-digits for numeric range checking
         // This assumes the range data in city_data.js is purely numeric and based on the numeric part of the zip prefix.
+        // For UK/Canada, this might be risky, but for Germany/US it is safer for range comparison.
         cleanZip = cleanZip.replace(/[^0-9]/g, '');
 
         const countryLower = country.toLowerCase().trim();
@@ -60,16 +61,22 @@ window.ZipScreeningLib = (function () {
             "great britain": "United Kingdom",
             "uae": "United Arab Emirates",
             "korea": "South Korea",
-            "south korea": "South Korea" // ensure casing match if needed, though we do case-insensitive search later
+            "south korea": "South Korea"
         };
+
+        console.log(`[ZIP LIB] Checking Surcharge for Country: '${country}', Zip: '${zip}'`);
 
         let effectiveCountry = country;
         const lowerC = country.toLowerCase().trim();
         if (aliases[lowerC]) {
             effectiveCountry = aliases[lowerC];
+            console.log(`[ZIP LIB] Alias Resolved: '${country}' -> '${effectiveCountry}'`);
+        } else {
+            console.log(`[ZIP LIB] No Alias Found. Using '${effectiveCountry}'`);
         }
 
         const effectiveZip = normalizeZip(effectiveCountry, zip);
+        console.log(`[ZIP LIB] Normalized Zip: '${effectiveZip}'`);
         const cityTrimmed = city ? city.trim() : "";
 
         // --- 1. RANGE LOOKUP (Postal Code) ---
@@ -88,11 +95,17 @@ window.ZipScreeningLib = (function () {
             if (ranges && Array.isArray(ranges) && effectiveZip) {
                 // For numeric ranges, we strip non-digits typically.
                 // Assuming city_data.js 'low' and 'high' are numeric.
-                const zipNum = parseInt(effectiveZip.replace(/[^0-9]/g, ''));
+                const rawZipNum = effectiveZip.replace(/[^0-9]/g, '');
+                const zipNum = parseInt(rawZipNum, 10);
+
+                // console.log(`[Debug] Checking Ranges for ${effectiveCountry} zip: ${effectiveZip} (Num: ${zipNum})`);
 
                 if (!isNaN(zipNum)) {
                     for (const range of ranges) {
-                        if (zipNum >= range.low && zipNum <= range.high) {
+                        const low = parseInt(range.low, 10);
+                        const high = parseInt(range.high, 10);
+                        if (zipNum >= low && zipNum <= high) {
+                            // console.log(`[Debug] Match Found! Range: ${low}-${high}`);
                             // Prefer range match if found
                             if (context === 'origin' && range.originType) return range.originType;
                             if (context === 'destination' && range.destType) return range.destType;
