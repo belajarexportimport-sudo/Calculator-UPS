@@ -77,11 +77,13 @@ function getCosts() {
     const dateInput = document.getElementById('shipmentDate');
     const dateStr = dateInput ? dateInput.value : '';
 
-    // Default to OLD rates if no date selected
-    if (!dateStr) return COSTS_DEFAULT;
+    // Default to 2025 rates if no date selected (Assuming current context)
+    if (!dateStr) return COSTS_2025;
 
     const selectedDate = new Date(dateStr);
-    const cutoffDate = new Date('2025-12-21');
+    // Cutoff for 2025 Rates was likely late 2024 (e.g., Dec 22, 2024)
+    // Changing from '2025-12-21' to '2024-12-21' to ensure 2025/2026 dates use new rates.
+    const cutoffDate = new Date('2024-12-21');
 
     if (selectedDate >= cutoffDate) {
         return COSTS_2025;
@@ -2857,6 +2859,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Comparison Logic (Option B)
         let freightForTax = finalTotal;
 
+        // Calculate Base Freight for Tax (Excluding Brokerage & VAT)
+        // freightPreTax = (Total Cost - Brokerage) + FSI = fsiBase + fsiAmount
+        // This is the clean "Freight" component without local service tax.
+        const freightPreTax = fsiBase + fsiAmount;
+        freightForTax = freightPreTax;
+
         if (hasHeavyOrLarge || isComparisonNeeded) {
             omxOptions.classList.remove('hidden');
             heavyWarning.classList.remove('hidden'); // Show Heavy Warning
@@ -2889,15 +2897,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             wwefTotal = finalTotal;
             let saverTotal = 0;
+
+            // Calculate Pre-Tax Difference for Tax Calculation
+            const diffPreTax = surchargeDiff + fsiOnDiff;
+
             if (isWwef) {
                 saverTotal = finalTotal + totalDiff;
+                // If converting WWEF -> Saver, add diff
+                freightForTax = freightPreTax + diffPreTax;
             } else {
                 saverTotal = finalTotal;
                 wwefTotal = finalTotal - totalDiff;
+                // If converting Saver -> WWEF, subtract diff? 
+                // Wait, if it IS NOT WWEF, then we rely on current freightPreTax.
+                // Logic above was: "Use the higher/surcharged rate for Tax Calculation safety".
+                // If current is Saver (Not WWEF), then freightForTax is already Saver (High).
+                freightForTax = freightPreTax;
             }
-
-            // Use the higher/surcharged rate for Tax Calculation safety
-            freightForTax = saverTotal;
 
             comparisonTitle.textContent = "Opsi Berat >= 70kg atau Batas Terlampaui";
             comparisonTitle.style.color = "red";
@@ -2912,7 +2928,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 5. Calculate Duty & Tax (if enabled)
-        // Use freightForTax (includes implied Surcharges/Red Price) to ensure CIF is accurate
+        // Use freightForTax (Pre-Tax Base) to ensure CIF is accurate and avoid double taxation
         // Move BEFORE Transit Prediction to prevent script errors from blocking Tax Calc
         calculateDutyTax(freightForTax);
 
